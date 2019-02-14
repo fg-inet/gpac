@@ -34,6 +34,25 @@
 
 #ifndef GPAC_DISABLE_CORE_TOOLS
 
+#include <errno.h>
+
+//taken from os_net.c
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+
+// new Muacc socket library in network.h declared
+#include <muacc/muacc.h>
+#include <muacc/muacc_client.h>
+#include <muacc/muacc_client_util.h>
+#include <muacc/intents.h>
+
+//#include <glib-2.0/glib.h>
+//#include <glib-2.0/glib-object.h>
+//#include <glib-2.0/gio/gio.h>
+
 #ifdef GPAC_HAS_SSL
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
@@ -55,6 +74,17 @@
 #define GF_DOWNLOAD_AGENT_NAME		"GPAC/" GPAC_FULL_VERSION
 //let's be agressive with socket buffer size
 #define GF_DOWNLOAD_BUFFER_SIZE		131072
+
+
+//turn on debug output to test socketconnect function
+#ifndef debugOutput_0
+#define debugOutput_0 1
+#endif
+
+// even more debug output
+#ifndef debugOutput_1
+#define debugOutput_1 1
+#endif
 
 
 static void gf_dm_connect(GF_DownloadSession *sess);
@@ -1079,6 +1109,87 @@ GF_Err gf_dm_sess_setup_from_url(GF_DownloadSession *sess, const char *url)
 		sep[3] = c;
 	}
 
+	// new socketconnect introduced before downloading every datachunk
+    if(debugOutput_0) {printf("dm_sess_setup_from_url called, is using socketconnect \n");}
+
+    //SOCKET testsock = 1;
+
+    if (!sess->sock) {
+		//sess->num_retry = 40;
+		sess->sock = gf_sk_new(GF_SOCK_TYPE_TCP);
+		//sess->sock->socket = -1;
+	}
+
+        //initialize variables for socketconnect call
+        int *sockpointer = &(sess->sock->socket);
+        u32 type = 1;
+
+        //setting up the socket intent for category intent
+        struct socketopt category;
+        category.level = SOL_INTENTS;
+        category.optname = INTENT_CATEGORY;
+        intent_category_t intent_val;
+        intent_val = INTENT_STREAM;
+        category.optval = &intent_val;
+        category.optlen = sizeof(int);
+        category.flags = 0;
+        category.returnvalue = 0;
+
+        category.next = 0;
+
+        socketopt_t *optpointer= &category;
+        //original call
+        //gf_sk_connect(sess->orig_url, sess->sock, sess->server_name, sess->port, local_ip);
+
+    if(debugOutput_1){
+        printf("content of session variable: %p \n", sess);
+        printf("content of sess->sock: %p \n", sess->sock);
+        printf("content of sess->sock->socket: %d \n", sess->sock->socket);}
+
+    if(debugOutput_1){printf("session status before socketconnect, sess->status: %d \n", sess->status);}
+
+    size_t hostlen = strlen(info.server_name);
+    char portstring[10];
+        //char *portstringptr = &portstring;
+    snprintf(portstring, 10, "%d", info.port);
+    const char *serv = portstring;
+    //const char *servptr = serv;
+    size_t servlen = strlen(serv);
+
+    int muaccret = NULL;
+    // the common start with gf_sk_connect() is used if it is the first connect of the session, that is status == GF_NETIO_SETUP
+    if(sess->status != GF_NETIO_SETUP){
+        muaccret = socketconnect(sockpointer, info.server_name, hostlen, serv, servlen, optpointer, 0, type, 0);
+    }
+
+    //checks if socket connected successfully
+    if(debugOutput_0){
+        struct sockaddr_in6 addr;
+        socklen_t len = sizeof(addr);
+        int z = getpeername((sess->sock->socket), (struct sockaddr*) &addr, &len);
+        if(z == 0){
+            printf("the socket is successfully connected with sess_setup_from_url \n");
+        }
+        else{
+            printf("Socket ERROR in sess_setup_from_url: %s \n", strerror(errno));
+        }
+    }
+
+
+    if(debugOutput_0){
+    printf("return of socketconnect %d \n", muaccret);
+    }
+
+// maybe need to fix internal session status at this point
+//    if(muaccret >= 0){
+//            //socket_changed = 1;
+//            sess->status = GF_NETIO_CONNECTED;
+//        }else{
+//            sess->status = GF_NETIO_DISCONNECTED;
+//            }
+//    printf("Inhalt2 sess->status %d \n", sess->status);
+
+
 	if (sess->port != info.port) {
 		socket_changed = GF_TRUE;
 		sess->port = info.port;
@@ -1139,6 +1250,11 @@ GF_Err gf_dm_sess_setup_from_url(GF_DownloadSession *sess, const char *url)
 	}
 	gf_dm_url_info_del(&info);
 	if (sep_frag) sep_frag[0]='#';
+
+
+	if(debugOutput_1){
+        printf("session status at end of sess_setup_from_url, sess->status: %d \n", sess->status);
+    }
 
 	if (sess->sock && !socket_changed) {
 		sess->status = GF_NETIO_CONNECTED;
@@ -1239,6 +1355,8 @@ GF_DownloadSession *gf_dm_sess_new_simple(GF_DownloadManager * dm, const char *u
 
 
 	assert( dm );
+	// define NULL socket
+	//sess->sock->socket=NULL;
 
 	*e = gf_dm_sess_setup_from_url(sess, url);
 	if (*e) {
@@ -1258,6 +1376,9 @@ GF_DownloadSession *gf_dm_sess_new(GF_DownloadManager *dm, const char *url, u32 
                                    void *usr_cbk,
                                    GF_Err *e)
 {
+
+	if(debugOutput_0){printf("new Download session has been started \n");}
+
 	GF_DownloadSession *sess;
 	GF_LOG(GF_LOG_DEBUG, GF_LOG_NETWORK, ("%s:%d gf_dm_sess_new(%s)\n", __FILE__, __LINE__, url));
 	*e = GF_OK;
@@ -1435,7 +1556,9 @@ static void gf_dm_connect(GF_DownloadSession *sess)
 		}
 
 		now  =gf_sys_clock_high_res();
-		e = gf_sk_connect(sess->sock, (char *) proxy, proxy_port, (char *)ip);
+		//e = gf_sk_connect(sess->sock, (char *) proxy, proxy_port, (char *)ip);
+        // url is now also passed as parameter
+        e = gf_sk_connect(sess->orig_url, sess->sock, (char *) proxy, proxy_port, (char *)ip);
 
 		/*retry*/
 		if ((e == GF_IP_SOCK_WOULD_BLOCK) && sess->num_retry) {
@@ -1685,10 +1808,22 @@ GF_Err gf_dm_sess_set_range(GF_DownloadSession *sess, u64 start_range, u64 end_r
 	return GF_OK;
 }
 
+// explicit socket release which could be used from mpd_in.c and also in dash_client.c
+GF_EXPORT
+GF_Err gf_dm_socketrelease(GF_DownloadSession *sess){
+    int e = socketrelease(sess->sock->socket);
+    if(e == -1){
+        return GF_IO_ERR;
+    }
+    return GF_OK;
+}
+
 GF_EXPORT
 GF_Err gf_dm_sess_process(GF_DownloadSession *sess)
 {
 	Bool go;
+
+if(debugOutput_1){printf("session status before io->run, sess->status: %d \n", sess->status);}
 
 	/*if session is threaded, start thread*/
 	if (! (sess->flags & GF_NETIO_SESSION_NOT_THREADED)) {
@@ -1699,6 +1834,7 @@ GF_Err gf_dm_sess_process(GF_DownloadSession *sess)
 		sess->th = gf_th_new(sess->orig_url);
 		if (!sess->th) return GF_OUT_OF_MEM;
 		gf_th_run(sess->th, gf_dm_session_thread, sess);
+
 		return GF_OK;
 	}
 	/*otherwise do a synchronous download*/
@@ -1716,6 +1852,10 @@ GF_Err gf_dm_sess_process(GF_DownloadSession *sess)
 			break;
 		case GF_NETIO_DATA_TRANSFERED:
 		case GF_NETIO_DISCONNECTED:
+            if(sess->sock){
+                    if(debugOutput_1){printf("Socket descriptor before socketrelease , sess->sock->socket: %d \n", sess->sock->socket);}
+                    socketrelease(sess->sock->socket);
+           }
 		case GF_NETIO_STATE_ERROR:
 			go = GF_FALSE;
 			break;
@@ -1733,6 +1873,9 @@ GF_Err gf_dm_sess_process(GF_DownloadSession *sess)
 			break;
 		}
 	}
+
+    if(debugOutput_1){printf("session status after io->run, sess->status: %d \n", sess->status);}
+
 	return sess->last_error;
 }
 

@@ -35,6 +35,14 @@ extern "C" {
  *	\brief Networking.
  */
 
+// new Muacc socket library
+#include <libmuacc-client/muacc.h>
+#include <libmuacc-client/muacc_client.h>
+#include <libmuacc-client/muacc_client_util.h>
+//#include <libmuacc-client/intents.h>
+//typedef s32 SOCKET;
+
+
 /*!
 *	\addtogroup net_grp Network
 *	\ingroup utils_grp
@@ -211,7 +219,20 @@ enum
  *The abstracted socket object allows you to build client and server applications very simply
  *with support for unicast and multicast
 */
-typedef struct __tag_socket GF_Socket;
+// added the whole struct in header file
+typedef s32 SOCKET;
+typedef struct __tag_socket{
+	u32 flags;
+	SOCKET socket;
+	/*destination address for sendto/recvfrom*/
+#ifdef GPAC_HAS_IPV6
+	struct sockaddr_storage dest_addr;
+#else
+	struct sockaddr_in dest_addr;
+#endif
+	u32 dest_addr_len;
+    u32 usec_wait;
+} GF_Socket;
 
 /*!
  *\brief abstracted socket group object
@@ -292,7 +313,7 @@ GF_Err gf_sk_bind(GF_Socket *sock, const char *local_ip, u16 port, const char *p
  *\param port remote port number to connect the socket to
  *\param local_ip the local (client) address (IP or DNS) if any, NULL otherwise.
  */
-GF_Err gf_sk_connect(GF_Socket *sock, const char *peer_name, u16 port, const char *local_ip);
+GF_Err gf_sk_connect(char *url, GF_Socket *sock, const char *peer_name, u16 port, const char *local_ip);
 /*!
  *\brief data emission
  *

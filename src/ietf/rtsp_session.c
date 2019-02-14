@@ -305,7 +305,9 @@ GF_Err gf_rtsp_check_connection(GF_RTSPSession *sess)
 		if (!sess->connection) return GF_OUT_OF_MEM;
 	}
 	//the session is down, reconnect
-	e = gf_sk_connect(sess->connection, sess->Server, sess->Port, sess->MobileIP);
+	//dummychar for url passing to socketconnect(this is not used for dash client)
+	char *dummychar=NULL;
+	e = gf_sk_connect(dummychar, sess->connection, sess->Server, sess->Port, sess->MobileIP);
 	if (e) return e;
 
 	if (sess->SockBufferSize) gf_sk_set_buffer_size(sess->connection, GF_FALSE, sess->SockBufferSize);
@@ -627,7 +629,9 @@ GF_Err gf_rtsp_http_tunnel_start(GF_RTSPSession *sess, char *UserAgent)
 	if (!sess->http ) return GF_IP_NETWORK_FAILURE;
 
 	/*mobileIP is enabled, bind first*/
-	if (gf_sk_connect(sess->http, sess->Server, sess->Port, sess->MobileIP)) return GF_IP_CONNECTION_FAILURE;
+	//dummychar for url passing to socketconnect(this is not used for dash client)
+	char *dummychar=NULL;
+	if (gf_sk_connect(dummychar, sess->http, sess->Server, sess->Port, sess->MobileIP)) return GF_IP_CONNECTION_FAILURE;
 
 	memset(buffer, 0, GF_RTSP_DEFAULT_BUFFER);
 	pos = 0;

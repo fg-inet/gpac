@@ -1981,6 +1981,9 @@ for opt do
                 echo "WARNING!! : you have forced not to use ZLIB. This will disable some core functionalities of GPAC."
                 echo
                 has_zlib="force-no"
+            else
+                echo "zlib forced to $tmp_has_zlib"
+                has_zlib=$tmp_has_zlib
             fi
             ;;
         --use-ogg=*) has_ogg=${opt#--use-ogg=}

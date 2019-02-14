@@ -236,6 +236,8 @@ LD_SONAME="-Wl,-h,$(LIB)"
 EXTRALIBS+= -lrt
 endif
 
+EXTRALIBS+=-lmuacc-client
+
 SRCS := $(OBJS:.o=.c) 
 
 all: lib

@@ -110,6 +110,14 @@ static int wsa_init = 0;
 #include <sys/types.h>
 #include <arpa/inet.h>
 
+
+// new Muacc socket library in network.h declared
+#include <muacc/muacc.h>
+#include <muacc/muacc_client.h>
+#include <muacc/muacc_client_util.h>
+#include <muacc/intents.h>
+//#include <libmuacc-client/intents.h>
+
 #include <gpac/network.h>
 
 /*not defined on solaris*/
@@ -126,7 +134,8 @@ static int wsa_init = 0;
 #define SOCKET_ERROR -1
 #define LASTSOCKERROR errno
 
-typedef s32 SOCKET;
+// in networ.h reinmachen ????
+//typedef s32 SOCKET;
 #define closesocket(v) close(v)
 
 #endif /*WIN32||_WIN32_WCE*/
@@ -159,6 +168,17 @@ static u32 ipv6_check_state = 0;
 #define NULL_SOCKET (SOCKET)NULL
 #endif
 
+//turn on debug output so see if sockets are connected and when writing on socket
+#ifndef debugOutput_0
+#define debugOutput_0 0
+#endif
+
+// even more debug output, to see important function calls and return values of socketconnect
+#ifndef debugOutput_1
+#define debugOutput_1 0
+#endif
+
+//int debugOutput_1 = 0;
 
 /*internal flags*/
 enum
@@ -173,11 +193,11 @@ enum
 	GF_SOCK_IS_MIP = 1<<15
 };
 
-struct __tag_socket
+/*struct __tag_socket
 {
 	u32 flags;
 	SOCKET socket;
-	/*destination address for sendto/recvfrom*/
+	//destination address for sendto/recvfrom
 #ifdef GPAC_HAS_IPV6
 	struct sockaddr_storage dest_addr;
 #else
@@ -187,7 +207,7 @@ struct __tag_socket
 
 	u32 usec_wait;
 };
-
+*/
 
 
 /*
@@ -346,6 +366,8 @@ GF_Err gf_sk_get_local_ip(GF_Socket *sock, char *buffer)
 GF_EXPORT
 GF_Socket *gf_sk_new(u32 SocketType)
 {
+    if(debugOutput_1){printf("gf_sk_new is called, memory is being allocated \n");}
+
 	GF_Socket *tmp;
 
 	/*init WinSock*/
@@ -454,7 +476,10 @@ static void gf_sk_free(GF_Socket *sock)
 		setsockopt(sock->socket, IPPROTO_IP, IP_DROP_MEMBERSHIP, (char *) &mreq, sizeof(mreq));
 #endif
 	}
-	if (sock->socket) closesocket(sock->socket);
+	//use new socketclose from muacc framework
+	if (sock -> socket) socketclose(sock->socket);
+
+	//if (sock->socket) closesocket(sock->socket);
 	sock->socket = (SOCKET) 0L;
 
 	/*if MobileIP socket, unregister it*/
@@ -497,8 +522,10 @@ void gf_sk_set_usec_wait(GF_Socket *sock, u32 usec_wait)
 
 
 //connects a socket to a remote peer on a given port
-GF_Err gf_sk_connect(GF_Socket *sock, const char *PeerName, u16 PortNumber, const char *local_ip)
+GF_Err gf_sk_connect(char *url, GF_Socket *sock, const char *PeerName, u16 PortNumber, const char *local_ip)
 {
+
+    if(debugOutput_1){printf("gf_sk_connect is called, is using socketconnect \n");}
 	s32 ret;
 #ifdef GPAC_HAS_IPV6
 	u32 type = (sock->flags & GF_SOCK_IS_TCP) ? SOCK_STREAM : SOCK_DGRAM;
@@ -507,6 +534,7 @@ GF_Err gf_sk_connect(GF_Socket *sock, const char *PeerName, u16 PortNumber, cons
 	gf_sk_free(sock);
 
 	GF_LOG(GF_LOG_INFO, GF_LOG_NETWORK, ("[Sock_IPV6] Solving %s address\n", PeerName));
+    // resolves the destination url using getaddrinfo()
 	res = gf_sk_get_ipv6_addr(PeerName, PortNumber, AF_UNSPEC, AI_PASSIVE, type);
 	if (!res) return GF_IP_CONNECTION_FAILURE;
 	GF_LOG(GF_LOG_INFO, GF_LOG_NETWORK, ("[Sock_IPV6] Host %s found\n", PeerName));
@@ -537,10 +565,11 @@ GF_Err gf_sk_connect(GF_Socket *sock, const char *PeerName, u16 PortNumber, cons
 			sock->socket = NULL_SOCKET;
 			continue;
 		}
-		if (sock->flags & GF_SOCK_NON_BLOCKING) gf_sk_set_block_mode(sock, GF_TRUE);
+		//if (sock->flags & GF_SOCK_NON_BLOCKING) gf_sk_set_block_mode(sock, GF_TRUE);
 		if (aip->ai_family==PF_INET6) sock->flags |= GF_SOCK_IS_IPV6;
 		else sock->flags &= ~GF_SOCK_IS_IPV6;
 
+        // lip = local ip, for mobile ip purposes
 		if (lip) {
 			ret = bind(sock->socket, lip->ai_addr, (int) lip->ai_addrlen);
 			if (ret == SOCKET_ERROR) {
@@ -551,7 +580,63 @@ GF_Err gf_sk_connect(GF_Socket *sock, const char *PeerName, u16 PortNumber, cons
 		}
 
 		GF_LOG(GF_LOG_INFO, GF_LOG_NETWORK, ("[Sock_IPV6] Connecting to %s:%d\n", PeerName, PortNumber));
-		ret = connect(sock->socket, aip->ai_addr, (int) aip->ai_addrlen);
+
+        // use new socketconnect from muacc framework, if system theoretically supports ipv6 getaddrinfo() is used, even if server doesnt support
+        // ipv6 in the end, only if gpac is install on ipv4 only systems the obsolete getaddrinfo() is used
+
+        int *sockpointer = &(sock->socket);
+
+        //at this point the socket is not yet connected
+
+        if(debugOutput_1){
+        printf("content of the socketpointer before socketconnect: %d \n", *sockpointer);
+        }
+
+        //set category intent
+        struct socketopt category;
+        category.level = SOL_INTENTS;
+        category.optname = INTENT_CATEGORY;
+        intent_category_t intent_val;
+        intent_val = INTENT_STREAM;
+        category.optval = &intent_val;
+        category.optlen = sizeof(int);
+        category.flags = 0;
+        category.returnvalue = 0;
+        category.next = 0;
+
+        socketopt_t *optpointer=&category;
+        size_t hostlen = strlen(PeerName);
+        char portstring[10];
+        //char *portstringptr = &portstring;
+        snprintf(portstring, 10, "%d", PortNumber);
+       const char *serv = portstring;
+       size_t servlen = strlen(serv);
+
+
+       ret = socketconnect(sockpointer, PeerName, hostlen, serv, servlen, optpointer, AF_UNSPEC, type, 0);
+
+        // dies ist ein testoutput
+       if(debugOutput_1){printf("return of socketconnect: %d \n", ret);}
+
+        //check if socket connected successfully
+        if(debugOutput_0){
+            struct sockaddr_in6 addr;
+            socklen_t len = sizeof(addr);
+            int z = getpeername((sock->socket), (struct sockaddr*) &addr, &len);
+            if(z == 0){
+                printf("the socket is successfully connected \n");
+            }
+            else{
+                printf("Socket ERROR: %s \n", strerror(errno));
+            }
+        }
+        // original connect call
+       //ret = connect(sock->socket, aip->ai_addr, (int) aip->ai_addrlen);
+
+       // set socket into non_blocking mode after socketconnect
+       if (sock->flags & GF_SOCK_NON_BLOCKING) {gf_sk_set_block_mode(sock, 1);}
+
+		//ret = connect(sock->socket, aip->ai_addr, (int) aip->ai_addrlen);
 		if (ret == SOCKET_ERROR) {
 			closesocket(sock->socket);
 			sock->socket = NULL_SOCKET;
@@ -569,6 +654,7 @@ GF_Err gf_sk_connect(GF_Socket *sock, const char *PeerName, u16 PortNumber, cons
 	if (lip) freeaddrinfo(lip);
 	return GF_IP_CONNECTION_FAILURE;
 
+// for IPv4 connections
 #else
 	struct hostent *Host;
 
@@ -579,6 +665,7 @@ GF_Err gf_sk_connect(GF_Socket *sock, const char *PeerName, u16 PortNumber, cons
 	}
 	if (!sock->socket) {
 		sock->socket = socket(AF_INET, (sock->flags & GF_SOCK_IS_TCP) ? SOCK_STREAM : SOCK_DGRAM, 0);
+
 		if (sock->flags & GF_SOCK_NON_BLOCKING)
 			gf_sk_set_block_mode(sock, 1);
 	}
@@ -607,8 +694,13 @@ GF_Err gf_sk_connect(GF_Socket *sock, const char *PeerName, u16 PortNumber, cons
 	}
 
 	if (sock->flags & GF_SOCK_IS_TCP) {
+         // this is only used if the configure script recognized that the client system cannot support ipv6 sockets,
+         // oboslete gethostbyname() is used
+        //ret = socketconnect(sock->socket, const char *url, struct socketopt *sockopts, int domain, int type, int proto);
+
 		GF_LOG(GF_LOG_INFO, GF_LOG_NETWORK, ("[Sock_IPV4] Connecting to %s:%d\n", PeerName, PortNumber));
 		ret = connect(sock->socket, (struct sockaddr *) &sock->dest_addr, sizeof(struct sockaddr));
+        printf("Socket wurde verbunden IPv4 socket \n");
 		if (ret == SOCKET_ERROR) {
 			u32 res = LASTSOCKERROR;
 			GF_LOG(GF_LOG_ERROR, GF_LOG_NETWORK, ("[Sock_IPV4] Couldn't connect socket - last sock error %d\n", res));
@@ -722,7 +814,7 @@ GF_Err gf_sk_bind(GF_Socket *sock, const char *local_ip, u16 port, const char *p
 		if (type != (u32) aip->ai_socktype) continue;
 
 		if (aip->ai_next && (aip->ai_next->ai_family==PF_INET) && !gf_net_is_ipv6(peer_name)) continue;
-
+    //initialization of the socket
 		sock->socket = socket(aip->ai_family, aip->ai_socktype, aip->ai_protocol);
 		if (sock->socket == INVALID_SOCKET) {
 			sock->socket = NULL_SOCKET;
@@ -887,6 +979,7 @@ GF_Err gf_sk_send(GF_Socket *sock, const char *buffer, u32 length)
 	}
 #endif
 
+    if(debugOutput_0){printf("sk_send called, starting to send on socket: %d \n", sock->socket);}
 	//direct writing
 	count = 0;
 	while (count < length) {
@@ -1251,6 +1344,9 @@ Bool gf_sk_group_sock_is_set(GF_SockGroup *sg, GF_Socket *sk)
 //BytesRead is the number of bytes read from the network
 GF_Err gf_sk_receive_internal(GF_Socket *sock, char *buffer, u32 length, u32 startFrom, u32 *BytesRead, Bool do_select)
 {
+	//die ist ein testoutput
+	//printf("socket empfaengt daten \n");
+
 	s32 res;
 #ifndef __SYMBIAN32__
 	s32 ready;

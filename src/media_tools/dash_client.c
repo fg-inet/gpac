@@ -33,6 +33,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
+
 #ifdef _WIN32_WCE
 #include <winbase.h>
 #else
@@ -49,6 +50,16 @@
 
 /*set to 1 if you want MPD to use SegmentTemplate if possible instead of SegmentList*/
 #define M3U8_TO_MPD_USE_TEMPLATE	0
+
+//turn on debug output, to see when dasch client is created
+#ifndef debugOutput_0
+#define debugOutput_0 0
+#endif
+
+// even more debug output, to see dash_io function calls
+#ifndef debugOutput_1
+#define debugOutput_1 0
+#endif
 
 typedef enum {
 	GF_DASH_STATE_STOPPED = 0,
@@ -1021,6 +1032,9 @@ GF_Err gf_dash_download_resource(GF_DashClient *dash, GF_DASHFileIOSession *sess
 	}
 
 	if (! *sess) {
+        //is calling gf_dm_sess_new
+        if(debugOutput_1){
+        printf("in dash_client, dash_io->create is called \n\n");}
 		*sess = dash_io->create(dash_io, persistent_mode ? 1 : 0, url, group_idx);
 		if (!(*sess)) {
 			if (dash->atsc_clock_state)
@@ -1031,6 +1045,9 @@ GF_Err gf_dash_download_resource(GF_DashClient *dash, GF_DASHFileIOSession *sess
 	} else {
 		had_sess = GF_TRUE;
 		if (persistent_mode!=2) {
+
+            if(debugOutput_1){printf("dash_io -> setup_from_url aufgerufen \n");}
+
 			e = dash_io->setup_from_url(dash_io, *sess, url, group_idx);
 			if (e) {
 				//with ATSC we may have 404 right away if nothing in cache yet, not an error
@@ -1065,7 +1082,7 @@ retry:
 
 	/*issue HTTP GET for headers only*/
 	e = dash_io->init(dash_io, *sess);
-
+// if GF_OK all headers have been sent (GET requests) and received
 	if (e>=GF_OK) {
 		/*check mime type of the adaptation set if not provided*/
 		if (group) {
@@ -1100,6 +1117,8 @@ retry:
 			}
 			group->segment_must_be_streamed = GF_FALSE;
 		}
+
+        if(debugOutput_1){printf("dash_io -> run() is called \n");}
 
 		//release dl_mutex while downloading segment
 		/*we can download the file*/
@@ -5601,6 +5620,7 @@ static DownloadGroupStatus dash_download_group_download(GF_DashClient *dash, GF_
 			dash->dash_io->on_dash_event(dash->dash_io, GF_DASH_EVENT_SEGMENT_AVAILABLE, gf_list_find(dash->groups, base_group), GF_OK);
 
 	}
+    //apparently here a segment download is finished and the next segment being loaded
 	if (new_base_seg_url) gf_free(new_base_seg_url);
 	if (key_url) gf_free(key_url);
 	if (e) return GF_DASH_DownloadCancel;
@@ -6124,6 +6144,7 @@ restart_period:
 			dash_global_rate_adaptation(dash, GF_TRUE);
 		}
 
+// apparently here all the segments are downloaded for a specific dash video representation
 
 		/*for each selected groups*/
 		for (i=0; i<group_count; i++) {
@@ -6763,6 +6784,8 @@ void gf_dash_set_algo(GF_DashClient *dash, GF_DASHAdaptationAlgorithm algo)
 GF_EXPORT
 GF_DashClient *gf_dash_new(GF_DASHFileIO *dash_io, u32 max_cache_duration, u32 auto_switch_count, Bool keep_files, Bool disable_switching, GF_DASHInitialSelectionMode first_select_mode, Bool enable_buffering, u32 initial_time_shift_percent)
 {
+	if(debugOutput_0){printf("new dash client has been started \n");}
+
 	GF_DashClient *dash;
 	GF_SAFEALLOC(dash, GF_DashClient);
 	if (!dash) return NULL;
