@@ -1110,9 +1110,7 @@ GF_Err gf_dm_sess_setup_from_url(GF_DownloadSession *sess, const char *url)
 	}
 
 	// new socketconnect introduced before downloading every datachunk
-    if(debugOutput_0) {printf("dm_sess_setup_from_url called, is using socketconnect \n");}
-
-    //SOCKET testsock = 1;
+    if(debugOutput_0) {printf("going to download from %s \n", url);}
 
     if (!sess->sock) {
 		//sess->num_retry = 40;
@@ -1141,13 +1139,6 @@ GF_Err gf_dm_sess_setup_from_url(GF_DownloadSession *sess, const char *url)
         //original call
         //gf_sk_connect(sess->orig_url, sess->sock, sess->server_name, sess->port, local_ip);
 
-    if(debugOutput_1){
-        printf("content of session variable: %p \n", sess);
-        printf("content of sess->sock: %p \n", sess->sock);
-        printf("content of sess->sock->socket: %d \n", sess->sock->socket);}
-
-    if(debugOutput_1){printf("session status before socketconnect, sess->status: %d \n", sess->status);}
-
     size_t hostlen = strlen(info.server_name);
     char portstring[10];
         //char *portstringptr = &portstring;
@@ -1156,29 +1147,40 @@ GF_Err gf_dm_sess_setup_from_url(GF_DownloadSession *sess, const char *url)
     //const char *servptr = serv;
     size_t servlen = strlen(serv);
 
+    if(debugOutput_1){
+        //printf("content of session variable: %p \n", sess);
+        //printf("content of sess->sock: %p \n", sess->sock);
+        //printf("content of sess->sock->socket: %d \n", sess->sock->socket);}
+        printf("\tBefore socketconnect: socket %d [host %s, port %s] \n", *sockpointer, info.server_name, serv);}
+
+
     int muaccret = NULL;
     // the common start with gf_sk_connect() is used if it is the first connect of the session, that is status == GF_NETIO_SETUP
-    if(sess->status != GF_NETIO_SETUP){
+    //if(sess->status != GF_NETIO_SETUP){
         muaccret = socketconnect(sockpointer, info.server_name, hostlen, serv, servlen, optpointer, 0, type, 0);
+    //}
+    if(debugOutput_1){
+        printf("\tAfter socketconnect: returned %d, socket %d, sess->status: %d \n", muaccret, *sockpointer, sess->status);
     }
+    //exit(0);
 
     //checks if socket connected successfully
     if(debugOutput_0){
         struct sockaddr_in6 addr;
         socklen_t len = sizeof(addr);
         int z = getpeername((sess->sock->socket), (struct sockaddr*) &addr, &len);
-        if(z == 0){
-            printf("the socket is successfully connected with sess_setup_from_url \n");
-        }
-        else{
+        if(z != 0){
             printf("Socket ERROR in sess_setup_from_url: %s \n", strerror(errno));
+        //}
+        //else{
+            //printf("the socket is successfully connected with sess_setup_from_url \n");
         }
     }
 
 
-    if(debugOutput_0){
-    printf("return of socketconnect %d \n", muaccret);
-    }
+    //if(debugOutput_0){
+    //printf("return of socketconnect %d \n", muaccret);
+    //}
 
 // maybe need to fix internal session status at this point
 //    if(muaccret >= 0){
@@ -1252,9 +1254,9 @@ GF_Err gf_dm_sess_setup_from_url(GF_DownloadSession *sess, const char *url)
 	if (sep_frag) sep_frag[0]='#';
 
 
-	if(debugOutput_1){
-        printf("session status at end of sess_setup_from_url, sess->status: %d \n", sess->status);
-    }
+	//if(debugOutput_1){
+    //    printf("session status at end of sess_setup_from_url, sess->status: %d \n", sess->status);
+    //}
 
 	if (sess->sock && !socket_changed) {
 		sess->status = GF_NETIO_CONNECTED;
@@ -1377,7 +1379,7 @@ GF_DownloadSession *gf_dm_sess_new(GF_DownloadManager *dm, const char *url, u32 
                                    GF_Err *e)
 {
 
-	if(debugOutput_0){printf("new Download session has been started \n");}
+	if(debugOutput_0){printf("Starting new download session with URL %s \n", url);}
 
 	GF_DownloadSession *sess;
 	GF_LOG(GF_LOG_DEBUG, GF_LOG_NETWORK, ("%s:%d gf_dm_sess_new(%s)\n", __FILE__, __LINE__, url));
@@ -1823,7 +1825,7 @@ GF_Err gf_dm_sess_process(GF_DownloadSession *sess)
 {
 	Bool go;
 
-if(debugOutput_1){printf("session status before io->run, sess->status: %d \n", sess->status);}
+//if(debugOutput_1){printf("session status before io->run, sess->status: %d \n", sess->status);}
 
 	/*if session is threaded, start thread*/
 	if (! (sess->flags & GF_NETIO_SESSION_NOT_THREADED)) {
@@ -1853,7 +1855,7 @@ if(debugOutput_1){printf("session status before io->run, sess->status: %d \n", s
 		case GF_NETIO_DATA_TRANSFERED:
 		case GF_NETIO_DISCONNECTED:
             if(sess->sock){
-                    if(debugOutput_1){printf("Socket descriptor before socketrelease , sess->sock->socket: %d \n", sess->sock->socket);}
+                    if(debugOutput_1){printf("\tReleasing socket: %d \n\n", sess->sock->socket);}
                     socketrelease(sess->sock->socket);
            }
 		case GF_NETIO_STATE_ERROR:
@@ -1874,7 +1876,7 @@ if(debugOutput_1){printf("session status before io->run, sess->status: %d \n", s
 		}
 	}
 
-    if(debugOutput_1){printf("session status after io->run, sess->status: %d \n", sess->status);}
+    //if(debugOutput_1){printf("session status after io->run, sess->status: %d \n", sess->status);}
 
 	return sess->last_error;
 }

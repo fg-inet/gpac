@@ -613,6 +613,7 @@ GF_Err gf_sk_connect(char *url, GF_Socket *sock, const char *PeerName, u16 PortN
        size_t servlen = strlen(serv);
 
 
+       if(debugOutput_1){printf("\tcalling socketconnect from os_net: socket %d \n", *sockpointer);}
        ret = socketconnect(sockpointer, PeerName, hostlen, serv, servlen, optpointer, AF_UNSPEC, type, 0);
 
         // dies ist ein testoutput
