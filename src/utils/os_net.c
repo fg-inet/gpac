@@ -170,12 +170,12 @@ static u32 ipv6_check_state = 0;
 
 //turn on debug output so see if sockets are connected and when writing on socket
 #ifndef debugOutput_0
-#define debugOutput_0 0
+#define debugOutput_0 1
 #endif
 
 // even more debug output, to see important function calls and return values of socketconnect
 #ifndef debugOutput_1
-#define debugOutput_1 0
+#define debugOutput_1 1
 #endif
 
 //int debugOutput_1 = 0;
@@ -617,7 +617,7 @@ GF_Err gf_sk_connect(char *url, GF_Socket *sock, const char *PeerName, u16 PortN
        ret = socketconnect(sockpointer, PeerName, hostlen, serv, servlen, optpointer, AF_UNSPEC, type, 0);
 
         // dies ist ein testoutput
-       if(debugOutput_1){printf("return of socketconnect: %d \n", ret);}
+       if(debugOutput_1){printf("return of socketconnect: socket %d, status %d \n", *sockpointer, ret);}
 
         //check if socket connected successfully
         if(debugOutput_0){

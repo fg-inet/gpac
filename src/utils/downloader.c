@@ -733,6 +733,8 @@ static void gf_dm_clear_headers(GF_DownloadSession *sess)
 
 static void gf_dm_disconnect(GF_DownloadSession *sess, Bool force_close)
 {
+	if(debugOutput_1) {printf("gf_dm_disconnect: called, sess->status = %d \n", sess->status);}
+
 	assert( sess );
 	if (sess->connection_close) force_close = GF_TRUE;
 	sess->connection_close = GF_FALSE;
@@ -778,6 +780,7 @@ static void gf_dm_disconnect(GF_DownloadSession *sess, Bool force_close)
 GF_EXPORT
 void gf_dm_sess_del(GF_DownloadSession *sess)
 {
+	if(debugOutput_1) {printf("gf_dm_sess_del: called, sess->status = %d\n", sess->status);}
 	GF_LOG(GF_LOG_INFO, GF_LOG_NETWORK, ("[Downloader] gf_dm_sess_del(%p)\n", sess ));
 	if (!sess)
 		return;
@@ -1071,6 +1074,7 @@ static void gf_dm_sess_reload_cached_headers(GF_DownloadSession *sess)
 GF_EXPORT
 GF_Err gf_dm_sess_setup_from_url(GF_DownloadSession *sess, const char *url)
 {
+	if(debugOutput_0) {printf("gf_dm_sess_setup_from_url called with %s \n", url);}
 	Bool socket_changed = GF_FALSE;
 	GF_URL_Info info;
 	char *sep_frag=NULL;
@@ -1109,35 +1113,32 @@ GF_Err gf_dm_sess_setup_from_url(GF_DownloadSession *sess, const char *url)
 		sep[3] = c;
 	}
 
-	// new socketconnect introduced before downloading every datachunk
-    if(debugOutput_0) {printf("going to download from %s \n", url);}
-
     if (!sess->sock) {
 		//sess->num_retry = 40;
 		sess->sock = gf_sk_new(GF_SOCK_TYPE_TCP);
 		//sess->sock->socket = -1;
 	}
 
-        //initialize variables for socketconnect call
-        int *sockpointer = &(sess->sock->socket);
-        u32 type = 1;
+    //initialize variables for socketconnect call
+    int *sockpointer = &(sess->sock->socket);
+    u32 type = 1;
 
-        //setting up the socket intent for category intent
-        struct socketopt category;
-        category.level = SOL_INTENTS;
-        category.optname = INTENT_CATEGORY;
-        intent_category_t intent_val;
-        intent_val = INTENT_STREAM;
-        category.optval = &intent_val;
-        category.optlen = sizeof(int);
-        category.flags = 0;
-        category.returnvalue = 0;
+    //setting up the socket intent for category intent
+    struct socketopt category;
+    category.level = SOL_INTENTS;
+    category.optname = INTENT_CATEGORY;
+    intent_category_t intent_val;
+    intent_val = INTENT_STREAM;
+    category.optval = &intent_val;
+    category.optlen = sizeof(int);
+    category.flags = 0;
+    category.returnvalue = 0;
 
-        category.next = 0;
+    category.next = 0;
 
-        socketopt_t *optpointer= &category;
-        //original call
-        //gf_sk_connect(sess->orig_url, sess->sock, sess->server_name, sess->port, local_ip);
+    socketopt_t *optpointer= &category;
+    //original call
+    //gf_sk_connect(sess->orig_url, sess->sock, sess->server_name, sess->port, local_ip);
 
     size_t hostlen = strlen(info.server_name);
     char portstring[10];
@@ -1147,25 +1148,27 @@ GF_Err gf_dm_sess_setup_from_url(GF_DownloadSession *sess, const char *url)
     //const char *servptr = serv;
     size_t servlen = strlen(serv);
 
-    if(debugOutput_1){
-        //printf("content of session variable: %p \n", sess);
-        //printf("content of sess->sock: %p \n", sess->sock);
-        //printf("content of sess->sock->socket: %d \n", sess->sock->socket);}
-        printf("\tBefore socketconnect: socket %d [host %s, port %s] \n", *sockpointer, info.server_name, serv);}
-
 
     int muaccret = NULL;
-    // the common start with gf_sk_connect() is used if it is the first connect of the session, that is status == GF_NETIO_SETUP
-    //if(sess->status != GF_NETIO_SETUP){
+    // if we are in status == GF_NETIO_SETUP, the first socketconnect() will be called by gf_sk_connect()
+	// because it has to initialize some data structure
+    if(sess->status != GF_NETIO_SETUP) {
+		if(debugOutput_1){
+			//printf("content of session variable: %p \n", sess);
+			//printf("content of sess->sock: %p \n", sess->sock);
+			//printf("content of sess->sock->socket: %d \n", sess->sock->socket);
+			printf("\tBefore socketconnect: socket %d [host %s, port %s] \n", *sockpointer, info.server_name, serv);
+		}
+
         muaccret = socketconnect(sockpointer, info.server_name, hostlen, serv, servlen, optpointer, 0, type, 0);
-    //}
-    if(debugOutput_1){
-        printf("\tAfter socketconnect: returned %d, socket %d, sess->status: %d \n", muaccret, *sockpointer, sess->status);
+		if(debugOutput_1){
+			printf("\tAfter socketconnect: returned %d, socket %d, sess->status: %d \n", muaccret, *sockpointer, sess->status);
+		}
     }
     //exit(0);
 
     //checks if socket connected successfully
-    if(debugOutput_0){
+    if(debugOutput_0 && sess->status != GF_NETIO_SETUP){
         struct sockaddr_in6 addr;
         socklen_t len = sizeof(addr);
         int z = getpeername((sess->sock->socket), (struct sockaddr*) &addr, &len);
