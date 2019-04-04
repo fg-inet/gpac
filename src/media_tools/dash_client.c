@@ -33,6 +33,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include <muacc/muacc_util.h>
 
 #ifdef _WIN32_WCE
 #include <winbase.h>
@@ -42,6 +43,7 @@
 
 #include <math.h>
 
+#define ABR_SWITCHING_LOG_FILE "switching.log"
 
 #ifndef GPAC_DISABLE_DASH_CLIENT
 
@@ -3282,6 +3284,8 @@ static void dash_do_rate_adaptation(GF_DashClient *dash, GF_DASH_Group *group)
 
 		GF_LOG(GF_LOG_DEBUG, GF_LOG_DASH, ("[DASH] AS#%d switching after playing %d segments, from rep %d to rep %d\n", 1 + gf_list_find(group->period->adaptation_sets, group->adaptation_set),
 				group->nb_segments_since_switch, group->active_rep_index, new_index));
+
+		_muacc_logtofile(ABR_SWITCHING_LOG_FILE, "%d,%d,%d,%d\n", 1 + gf_list_find(group->period->adaptation_sets, group->adaptation_set), group->nb_segments_since_switch, group->active_rep_index, new_index);
 		group->nb_segments_since_switch = 0;
 
 		if (force_lower_complexity) {
@@ -3428,6 +3432,8 @@ static GF_Err gf_dash_download_init_segment(GF_DashClient *dash, GF_DASH_Group *
 				if (a_rep->playback.disabled) continue;
 
 				e = gf_dash_resolve_url(dash->mpd, a_rep, group, dash->base_url, GF_MPD_RESOLVE_URL_INIT, 0, &a_base_init_url, &a_start, &a_end, &a_dur, NULL, &a_rep->playback.key_url, &a_rep->playback.key_IV, &a_rep->playback.owned_gmem);
+
+				printf("Downloading segment of representation with dash->base_url %s, base init url %s\n", dash->base_url, a_base_init_url);
 				if (!e && a_base_init_url) {
 					a_rep->playback.cached_init_segment_url = a_base_init_url;
 					a_rep->playback.init_start_range = a_start;
@@ -3597,6 +3603,7 @@ static GF_Err gf_dash_download_init_segment(GF_DashClient *dash, GF_DASH_Group *
 	if (!group->bitstream_switching) {
 		u32 k;
 		for (k=0; k<gf_list_count(group->adaptation_set->representations); k++) {
+			printf("Download init segment %d / %d\n", k, gf_list_count(group->adaptation_set->representations));
 			char *a_base_init_url = NULL;
 			u64 a_start, a_end, a_dur;
 			GF_MPD_Representation *a_rep = gf_list_get(group->adaptation_set->representations, k);
@@ -3604,6 +3611,7 @@ static GF_Err gf_dash_download_init_segment(GF_DashClient *dash, GF_DASH_Group *
 			if (a_rep->playback.disabled) continue;
 
 			e = gf_dash_resolve_url(dash->mpd, a_rep, group, dash->base_url, GF_MPD_RESOLVE_URL_INIT, 0, &a_base_init_url, &a_start, &a_end, &a_dur, NULL, &a_rep->playback.key_url, &a_rep->playback.key_IV, &a_rep->playback.owned_gmem);
+			printf("Got base URL %s and resolved URL %s\n", dash->base_url, a_base_init_url);
 			if (!e && a_base_init_url) {
 				e = gf_dash_download_resource(dash, &(group->segment_download), a_base_init_url, a_start, a_end, 1, group);
 
