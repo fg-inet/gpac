@@ -1162,7 +1162,7 @@ GF_Err gf_dm_sess_setup_from_url(GF_DownloadSession *sess, const char *url)
 
         muaccret = socketconnect(sockpointer, info.server_name, hostlen, serv, servlen, optpointer, 0, type, 0);
 		if(debugOutput_1){
-			printf("\tAfter socketconnect: returned %d, socket %d, sess->status: %d \n", muaccret, *sockpointer, sess->status);
+			printf("\tAfter socketconnect: socket %d, socketconnect status %d, sess->status: %d \n", *sockpointer, muaccret, sess->status);
 		}
     }
     //exit(0);
