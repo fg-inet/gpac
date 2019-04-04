@@ -45,6 +45,7 @@
 
 #define ABR_SWITCHING_LOG_FILE "switching.log"
 #define INITIAL_PLAYOUT_DELAY_LOG_FILE "initial_playout.log"
+#define ABR_LOG_FILE "abr.log"
 
 #ifndef GPAC_DISABLE_DASH_CLIENT
 
@@ -63,6 +64,8 @@
 #ifndef debugOutput_1
 #define debugOutput_1 1
 #endif
+
+int segment_counter = 0;
 
 typedef enum {
 	GF_DASH_STATE_STOPPED = 0,
@@ -2857,6 +2860,8 @@ static s32 dash_do_rate_adaptation_legacy_buffer(GF_DashClient *dash, GF_DASH_Gr
 		}
 	}
 
+	segment_counter++;
+	_muacc_logtofile(ABR_LOG_FILE, "%d,%d,%d,%d\n", segment_counter, group->active_rep_index, group->buffer_occupancy_ms, group->buffer_max_ms);
 	/* Unless the switching has been turned off (e.g. middle buffer range),
 	   we apply rate-based adaptation */
 	if (do_switch) {
