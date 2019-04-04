@@ -654,6 +654,7 @@ void mpdin_dash_io_abort(GF_DASHFileIO *dashio, GF_DASHFileIOSession session)
 }
 GF_Err mpdin_dash_io_setup_from_url(GF_DASHFileIO *dashio, GF_DASHFileIOSession session, const char *url, s32 group_idx)
 {
+	printf("mpdin_dash_io_setup_from_url: called with URL %s\n", url);
 	if (group_idx>=0) {
 		GF_MPD_In *mpdin = (GF_MPD_In *)dashio->udta;
 		GF_MPDGroup *group = gf_dash_get_group_udta(mpdin->dash, group_idx);

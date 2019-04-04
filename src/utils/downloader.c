@@ -1491,6 +1491,7 @@ static Bool rfc2818_match(const char *pattern, const char *string)
 
 static void gf_dm_connect(GF_DownloadSession *sess)
 {
+	if(debugOutput_1){printf("gf_dm_connect called, sess->status: %d, socket: %d\n", sess->status, sess->sock == NULL ? 0 : sess->sock->socket);}
 	GF_Err e;
 	u16 proxy_port = 0;
 	const char *proxy, *ip;
@@ -1498,6 +1499,7 @@ static void gf_dm_connect(GF_DownloadSession *sess)
 	if (!sess->sock) {
 		sess->num_retry = 40;
 		sess->sock = gf_sk_new(GF_SOCK_TYPE_TCP);
+		if(debugOutput_1){printf("gf_dm_connect: created new socket %d\n", sess->sock->socket);}
 	}
 
 	/*connect*/
@@ -1560,6 +1562,7 @@ static void gf_dm_connect(GF_DownloadSession *sess)
 			return;
 		}
 
+		if(debugOutput_1){printf("gf_dm_connect: status is %d (GF_NETIO_SETUP), calling gf_sk_connect to %s\n", sess->status, sess->orig_url);}
 		now  =gf_sys_clock_high_res();
 		//e = gf_sk_connect(sess->sock, (char *) proxy, proxy_port, (char *)ip);
         // url is now also passed as parameter
@@ -1595,6 +1598,7 @@ static void gf_dm_connect(GF_DownloadSession *sess)
 		sess->status = GF_NETIO_CONNECTED;
 		GF_LOG(GF_LOG_INFO, GF_LOG_NETWORK, ("[HTTP] Connected to %s:%d\n", proxy, proxy_port));
 		gf_dm_sess_notify_state(sess, GF_NETIO_CONNECTED, GF_OK);
+		if(debugOutput_1){printf("gf_dm_connect: connected, sess_status is %d (GF_OK)\n", sess->status);}
 //		gf_sk_set_buffer_size(sess->sock, GF_TRUE, GF_DOWNLOAD_BUFFER_SIZE);
 //		gf_sk_set_buffer_size(sess->sock, GF_FALSE, GF_DOWNLOAD_BUFFER_SIZE);
 	}
@@ -1828,7 +1832,7 @@ GF_Err gf_dm_sess_process(GF_DownloadSession *sess)
 {
 	Bool go;
 
-//if(debugOutput_1){printf("session status before io->run, sess->status: %d \n", sess->status);}
+	if(debugOutput_1){printf("gf_dm_sess_process called, sess->status: %d, socket: %d \n", sess->status, sess->sock == NULL ? 0 : sess->sock->socket);}
 
 	/*if session is threaded, start thread*/
 	if (! (sess->flags & GF_NETIO_SESSION_NOT_THREADED)) {
@@ -3653,6 +3657,7 @@ static void wget_NetIO(void *cbk, GF_NETIO_Parameter *param)
 GF_EXPORT
 GF_Err gf_dm_wget(const char *url, const char *filename, u64 start_range, u64 end_range, char **redirected_url)
 {
+	if(debugOutput_1){printf("gf_dm_wget: called with %s \n", url);}
 	GF_Err e;
 	GF_DownloadManager * dm = NULL;
 	dm = gf_dm_new(NULL);
@@ -3665,6 +3670,7 @@ GF_Err gf_dm_wget(const char *url, const char *filename, u64 start_range, u64 en
 
 GF_Err gf_dm_wget_with_cache(GF_DownloadManager * dm, const char *url, const char *filename, u64 start_range, u64 end_range, char **redirected_url)
 {
+	if(debugOutput_1){printf("gf_dm_wget_with_cache: called with %s \n", url);}
 	GF_Err e;
 	FILE * f;
 	GF_DownloadSession *dnload;
@@ -3702,6 +3708,7 @@ GF_Err gf_dm_wget_with_cache(GF_DownloadManager * dm, const char *url, const cha
 GF_EXPORT
 GF_Err gf_dm_get_file_memory(const char *url, char **out_data, u32 *out_size, char **out_mime)
 {
+	if(debugOutput_0) {printf("gf_dm_get_file_memory: called with %s \n", url);}
 	GF_Err e;
 	FILE * f;
 	char * f_fn = NULL;
@@ -3761,6 +3768,7 @@ GF_Err gf_dm_get_file_memory(const char *url, char **out_data, u32 *out_size, ch
 	gf_free(f_fn);
 	gf_dm_sess_del(dnload);
 	gf_dm_del(dm);
+	if(debugOutput_0) {printf("gf_dm_get_file_memory: ended for %s \n", url);}
 	return e;
 }
 

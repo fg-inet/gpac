@@ -53,12 +53,12 @@
 
 //turn on debug output, to see when dasch client is created
 #ifndef debugOutput_0
-#define debugOutput_0 0
+#define debugOutput_0 1
 #endif
 
 // even more debug output, to see dash_io function calls
 #ifndef debugOutput_1
-#define debugOutput_1 0
+#define debugOutput_1 1
 #endif
 
 typedef enum {
