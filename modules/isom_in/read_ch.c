@@ -30,6 +30,11 @@
 
 #ifndef GPAC_DISABLE_ISOM
 
+#include <muacc/muacc_util.h>
+#define INITIAL_PLAYOUT_DELAY_LOG_FILE "initial_playout.log"
+
+int counter = 0;
+
 
 void isor_reset_reader(ISOMChannel *ch)
 {
@@ -469,6 +474,10 @@ static void init_reader(ISOMChannel *ch)
 	if (!sample_desc_index) sample_desc_index = 1;
 	ch->last_sample_desc_index = sample_desc_index;
 	ch->owner->no_order_check = ch->speed < 0 ? GF_TRUE : GF_FALSE;
+
+	u64 current_time = gf_net_get_utc();
+	fprintf(stderr, "Initialized at "LLU"\n", current_time);
+	_muacc_logtofile(INITIAL_PLAYOUT_DELAY_LOG_FILE, LLU"\n", current_time);
 }
 
 void isor_reader_get_sample_from_item(ISOMChannel *ch)

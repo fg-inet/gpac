@@ -56,7 +56,7 @@ SRCS := $(OBJS:.o=.c)
 all: $(PROG)
 
 MP4Client$(EXE): $(OBJS)
-	$(CC) -o ../../bin/gcc/$@ $(OBJS) -L../../bin/gcc $(LINKFLAGS) $(LDFLAGS)
+	$(CC) -o ../../bin/gcc/$@ $(OBJS) -L../../bin/gcc -lmuacc-client $(LINKFLAGS) $(LDFLAGS)
 
 clean: 
 	rm -f $(OBJS) ../../bin/gcc/$(PROG)

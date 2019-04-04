@@ -49,6 +49,8 @@
 #include <muacc/muacc_client_util.h>
 #include <muacc/intents.h>
 
+#define INITIAL_PLAYOUT_DELAY_LOG_FILE "initial_playout.log"
+
 //#include <glib-2.0/glib.h>
 //#include <glib-2.0/glib-object.h>
 //#include <glib-2.0/gio/gio.h>
@@ -1382,7 +1384,9 @@ GF_DownloadSession *gf_dm_sess_new(GF_DownloadManager *dm, const char *url, u32 
                                    GF_Err *e)
 {
 
-	if(debugOutput_0){printf("Starting new download session with URL %s \n", url);}
+	u64 current_time = gf_net_get_utc();
+	if(debugOutput_0){printf("Starting new download session with URL %s at "LLU"\n", url, current_time);}
+	_muacc_logtofile(INITIAL_PLAYOUT_DELAY_LOG_FILE, LLU",", current_time);
 
 	GF_DownloadSession *sess;
 	GF_LOG(GF_LOG_DEBUG, GF_LOG_NETWORK, ("%s:%d gf_dm_sess_new(%s)\n", __FILE__, __LINE__, url));

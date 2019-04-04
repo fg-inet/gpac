@@ -44,6 +44,7 @@
 #include <math.h>
 
 #define ABR_SWITCHING_LOG_FILE "switching.log"
+#define INITIAL_PLAYOUT_DELAY_LOG_FILE "initial_playout.log"
 
 #ifndef GPAC_DISABLE_DASH_CLIENT
 
@@ -3603,7 +3604,7 @@ static GF_Err gf_dash_download_init_segment(GF_DashClient *dash, GF_DASH_Group *
 	if (!group->bitstream_switching) {
 		u32 k;
 		for (k=0; k<gf_list_count(group->adaptation_set->representations); k++) {
-			printf("Download init segment %d / %d\n", k, gf_list_count(group->adaptation_set->representations));
+			printf("Download init segment %d / %d\n", k+1, gf_list_count(group->adaptation_set->representations));
 			char *a_base_init_url = NULL;
 			u64 a_start, a_end, a_dur;
 			GF_MPD_Representation *a_rep = gf_list_get(group->adaptation_set->representations, k);
@@ -3638,6 +3639,9 @@ static GF_Err gf_dash_download_init_segment(GF_DashClient *dash, GF_DASH_Group *
 			}
 
 		}
+		u64 current_time = gf_net_get_utc();
+		fprintf(stderr, "Loaded all initial segments at "LLU"\n", current_time);
+		_muacc_logtofile(INITIAL_PLAYOUT_DELAY_LOG_FILE, LLU",", current_time);
 	}
 	//reset baseURL idx to use first base URL
 	group->current_base_url_idx = 0;

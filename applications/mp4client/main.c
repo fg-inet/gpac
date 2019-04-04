@@ -37,6 +37,9 @@
 #include <gpac/utf.h>
 #include <time.h>
 
+#include <muacc/muacc_util.h>
+#define INITIAL_PLAYOUT_DELAY_LOG_FILE "initial_playout.log"
+
 /*ISO 639 languages*/
 #include <gpac/iso639.h>
 
@@ -1206,6 +1209,8 @@ static void progress_quiet(const void *cbck, const char *title, u64 done, u64 to
 
 int mp4client_main(int argc, char **argv)
 {
+	_muacc_logtofile(INITIAL_PLAYOUT_DELAY_LOG_FILE, LLU",", gf_net_get_utc());
+	printf("Starting player...\n");
 	char c;
 	const char *str;
 	int ret_val = 0;
@@ -1640,6 +1645,8 @@ int mp4client_main(int argc, char **argv)
 		return 1;
 	}
 	fprintf(stderr, "Terminal Loaded in %d ms\n", gf_sys_clock()-i);
+	_muacc_logtofile(INITIAL_PLAYOUT_DELAY_LOG_FILE, "%s,"LLU",", url_arg, gf_net_get_utc());
+	printf("Terminal loaded...\n");
 
 	if (bench_mode) {
 		display_rti = 2;

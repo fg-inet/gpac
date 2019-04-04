@@ -24,6 +24,7 @@ ifeq ($(CONFIG_WIN32),yes)
 #LDFLAGS+=-export-symbols isom_in.def 
 endif
 
+EXTRALIBS+=-lmuacc-client
 
 all: $(LIB)
 
