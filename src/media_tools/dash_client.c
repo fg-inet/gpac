@@ -2789,6 +2789,10 @@ static s32 dash_do_rate_adaptation_legacy_rate(GF_DashClient *dash, GF_DASH_Grou
 			}
 		}
 	}
+    if (dash->adaptation_algorithm == GF_DASH_ALGO_GPAC_LEGACY_RATE) {
+        segment_counter++;
+        _muacc_logtofile(ABR_LOG_FILE, "%d,%d,%d,%d,%d\n", segment_counter, group->active_rep_index, group->buffer_occupancy_ms, dl_rate, group->buffer_max_ms);
+    }
 
 	return new_index;
 }
@@ -2860,13 +2864,14 @@ static s32 dash_do_rate_adaptation_legacy_buffer(GF_DashClient *dash, GF_DASH_Gr
 		}
 	}
 
-	segment_counter++;
-	_muacc_logtofile(ABR_LOG_FILE, "%d,%d,%d,%d\n", segment_counter, group->active_rep_index, group->buffer_occupancy_ms, group->buffer_max_ms);
 	/* Unless the switching has been turned off (e.g. middle buffer range),
 	   we apply rate-based adaptation */
 	if (do_switch) {
 		new_index = dash_do_rate_adaptation_legacy_rate(dash, group, base_group, dl_rate, speed, max_available_speed, force_lower_complexity, rep, go_up_bitrate);
 	}
+
+	segment_counter++;
+	_muacc_logtofile(ABR_LOG_FILE, "%d,%d,%d,%d,%d\n", segment_counter, group->active_rep_index, group->buffer_occupancy_ms, dl_rate, group->buffer_max_ms);
 
 	return new_index;
 }
@@ -3011,6 +3016,10 @@ static s32 dash_do_rate_adaptation_bba0(GF_DashClient *dash, GF_DASH_Group *grou
 		group->current_index++;
 		GF_LOG(GF_LOG_INFO, GF_LOG_DASH, ("[DASH] BBA-0: buffer %d ms, segment number %d, new quality %d with rate %d\n", group->buffer_occupancy_ms, group->current_index, new_index, result->bandwidth));
 	}
+
+	segment_counter++;
+	_muacc_logtofile(ABR_LOG_FILE, "%d,%d,%d,%d,%d\n", segment_counter, group->active_rep_index, group->buffer_occupancy_ms, dl_rate, group->buffer_max_ms);
+
 	return new_index;
 }
 
@@ -3146,6 +3155,10 @@ static s32 dash_do_rate_adaptation_bola(GF_DashClient *dash, GF_DASH_Group *grou
 		group->current_index++;
 		GF_LOG(GF_LOG_INFO, GF_LOG_DASH, ("[DASH] BOLA: buffer %d ms, segment number %d, new quality %d with rate %d\n", group->buffer_occupancy_ms, group->current_index, new_index, result->bandwidth));
 	}
+
+	segment_counter++;
+	_muacc_logtofile(ABR_LOG_FILE, "%d,%d,%d,%d,%d\n", segment_counter, group->active_rep_index, group->buffer_occupancy_ms, dl_rate, group->buffer_max_ms);
+
 	return new_index;
 }
 
