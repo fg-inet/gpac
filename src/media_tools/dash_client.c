@@ -46,6 +46,7 @@
 #define ABR_SWITCHING_LOG_FILE "switching.log"
 #define INITIAL_PLAYOUT_DELAY_LOG_FILE "initial_playout.log"
 #define ABR_LOG_FILE "abr.log"
+#define DOWNLOADTIME_LOG_FILE "download.log"
 
 #ifndef GPAC_DISABLE_DASH_CLIENT
 
@@ -1031,7 +1032,8 @@ GF_Err gf_dash_download_resource(GF_DashClient *dash, GF_DASHFileIOSession *sess
 	GF_Err e;
 	GF_DASHFileIO *dash_io = dash->dash_io;
 
-	GF_LOG(GF_LOG_DEBUG, GF_LOG_DASH, ("[DASH] Downloading %s starting at UTC "LLU" ms\n", url, gf_net_get_utc() ));
+    u64 starttime = gf_net_get_utc();
+	GF_LOG(GF_LOG_DEBUG, GF_LOG_DASH, ("[DASH] Downloading %s starting at UTC "LLU" ms\n", url, starttime ));
 
 	if (group) {
 		group_idx = gf_list_find(group->dash->groups, group);
@@ -1160,7 +1162,10 @@ retry:
 		}
 		break;
 	case GF_OK:
-		GF_LOG(GF_LOG_DEBUG, GF_LOG_DASH, ("[DASH] Download %s complete at UTC "LLU" ms\n", url, gf_net_get_utc() ));
+        fprintf(stderr, " ");
+        u64 endtime = gf_net_get_utc();
+		GF_LOG(GF_LOG_DEBUG, GF_LOG_DASH, ("[DASH] Download %s complete at UTC "LLU" ms\n", url, endtime ));
+        _muacc_logtofile(DOWNLOADTIME_LOG_FILE, "%d," LLU"," LLU"\n", segment_counter, starttime, endtime);
 		break;
 	default:
 		//log as warning, maybe the dash client can recover from this error
