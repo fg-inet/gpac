@@ -33,6 +33,13 @@
 #include "media_control.h"
 #include "input_sensor.h"
 
+#include <muacc/muacc_util.h>
+#define INITIAL_PLAYOUT_DELAY_LOG_FILE "initial_playout.log"
+
+int already_decoded_something = 0;
+u64 previous_decode = 0;
+
+
 GF_Err Codec_Load(GF_Codec *codec, GF_ESD *esd, u32 PL);
 GF_Err gf_codec_process_raw_media_pull(GF_Codec *codec, u32 TimeAvailable);
 
@@ -1520,6 +1527,21 @@ scalable_retry:
 			unit_size = 0;
 			GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] ODM%d: force drop requested in fast playback for AU CTS %u\n", codec->decio->module_name, codec->odm->OD->objectDescriptorID, AU->CTS));
 		} else {
+			if (already_decoded_something < 2) {
+				already_decoded_something = 1;
+				u64 current_time = gf_net_get_utc();
+				fprintf(stderr, "Decode at "LLU"\n", current_time);
+				if (previous_decode > 0) {
+					int decodediff = current_time - previous_decode;
+					fprintf(stderr, "Previous decode at "LLU" -- %d ms ago\n", previous_decode, decodediff);
+					if (decodediff > 1000) {
+						fprintf(stderr, "First decode after long time -- this might be initial playout at "LLU"\n", current_time);
+						_muacc_logtofile(INITIAL_PLAYOUT_DELAY_LOG_FILE, LLU"\n", current_time);
+						already_decoded_something = 2;
+					}
+				}
+				previous_decode = current_time;
+			}
 			GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] At %u ODM%d ES%d (%s) decoding frame DTS %u CTS %u size %d (%d in channels)\n", codec->decio->module_name, gf_clock_real_time(ch->clock), codec->odm->OD->objectDescriptorID, ch->esd->ESID, ch->odm->net_service->url, AU->DTS, AU->CTS, AU->dataLength, ch->AU_Count));
 			e = mdec->ProcessData(mdec, AU->data, AU->dataLength, ch->esd->ESID, &CU->TS, CU->data, &unit_size, AU->PaddingBits, mmlevel);
 		}

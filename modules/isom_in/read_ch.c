@@ -477,7 +477,7 @@ static void init_reader(ISOMChannel *ch)
 
 	u64 current_time = gf_net_get_utc();
 	fprintf(stderr, "Initialized at "LLU"\n", current_time);
-	_muacc_logtofile(INITIAL_PLAYOUT_DELAY_LOG_FILE, LLU"\n", current_time);
+	_muacc_logtofile(INITIAL_PLAYOUT_DELAY_LOG_FILE, LLU",", current_time);
 }
 
 void isor_reader_get_sample_from_item(ISOMChannel *ch)
