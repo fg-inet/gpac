@@ -1165,7 +1165,7 @@ retry:
         fprintf(stderr, " ");
         u64 endtime = gf_net_get_utc();
 		GF_LOG(GF_LOG_DEBUG, GF_LOG_DASH, ("[DASH] Download %s complete at UTC "LLU" ms\n", url, endtime ));
-        _muacc_logtofile(DOWNLOADTIME_LOG_FILE, "%d," LLU"," LLU"\n", segment_counter, starttime, endtime);
+        _muacc_logtofile(DOWNLOADTIME_LOG_FILE, "%d," LLU"," LLU"\n", segment_counter+1, starttime, endtime);
 		break;
 	default:
 		//log as warning, maybe the dash client can recover from this error
