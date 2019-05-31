@@ -670,7 +670,7 @@ char *gf_mo_fetch_data(GF_MediaObject *mo, GF_MOFetchMode resync, u32 upload_tim
 	} else  {
 		diff = mo->odm->codec->min_frame_dur;
 	}
-//	fprintf(stderr, "diff is %d ms\n", diff);
+//	fprintf(stderr, "diff between CU->next->TS %d and obj_time %d is %d ms\n", CU->next->TS, obj_time, diff);
 	mo->ms_until_next = FIX2INT(diff * mo->speed);
 
 	diff = (mo->speed >= 0) ? (s32) (CU->TS) - (s32) obj_time : (s32) obj_time - (s32) (CU->TS);
@@ -691,8 +691,12 @@ char *gf_mo_fetch_data(GF_MediaObject *mo, GF_MOFetchMode resync, u32 upload_tim
 			if (s && s->root_od)
 				s->root_od->media_current_time = mo->odm->media_current_time;
 		}
+        if (mo->ms_until_pres < 0) {
+            mo->ms_until_pres = 0;
+            mo->ms_until_next = 41;
+        }
 
-		GF_LOG(GF_LOG_DEBUG, GF_LOG_MEDIA, ("[ODM%d (%s)] At OTB %u fetch frame TS %u size %d (previous TS %u) - %d unit in CB - UTC "LLU" ms - %d ms until CTS is due - %d ms until next frame\n", mo->odm->OD->objectDescriptorID, mo->odm->net_service->url, gf_clock_time(codec->ck), CU->TS, mo->framesize, mo->timestamp, codec->CB->UnitCount, gf_net_get_utc(), mo->ms_until_pres, mo->ms_until_next ));
+		GF_LOG(GF_LOG_DEBUG, GF_LOG_MEDIA, ("[ODM%d (%s)] "LLU" At OTB %u fetch frame TS %u size %d (previous TS %u) - %d unit in CB - UTC "LLU" ms - %d ms until CTS is due - %d ms until next frame\n", mo->odm->OD->objectDescriptorID, mo->odm->net_service->url, gf_net_get_utc(), gf_clock_time(codec->ck), CU->TS, mo->framesize, mo->timestamp, codec->CB->UnitCount, gf_net_get_utc(), mo->ms_until_pres, mo->ms_until_next ));
 
 		if (CU->sender_ntp) {
 			s32 ntp_diff = gf_net_get_ntp_diff_ms(CU->sender_ntp);

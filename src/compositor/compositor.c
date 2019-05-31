@@ -2831,12 +2831,14 @@ void gf_sc_render_frame(GF_Compositor *compositor)
 		compositor->ms_until_next_frame -= end_time;
 
 		if (compositor->ms_until_next_frame<=0) {
-			GF_LOG(GF_LOG_DEBUG, GF_LOG_COMPOSE, ("[Compositor] Next frame already due (%d ms late) - not going to sleep\n", - compositor->ms_until_next_frame));
-			compositor->ms_until_next_frame=0;
-			return;
+			GF_LOG(GF_LOG_DEBUG, GF_LOG_COMPOSE, ("[Compositor] Next frame already due (%d ms late) - but still going to sleep\n", - compositor->ms_until_next_frame));
+			//GF_LOG(GF_LOG_DEBUG, GF_LOG_COMPOSE, ("[Compositor] Next frame already due (%d ms late) - not going to sleep\n", - compositor->ms_until_next_frame));
+			//compositor->ms_until_next_frame=0;
+			//return;
+            compositor->ms_until_next_frame = 41;
 		}
 
-		compositor->ms_until_next_frame = MIN(compositor->ms_until_next_frame, (s32) frame_duration );
+		//compositor->ms_until_next_frame = MIN(compositor->ms_until_next_frame, (s32) frame_duration );
 		GF_LOG(GF_LOG_DEBUG, GF_LOG_COMPOSE, ("[Compositor] Next frame due in %d ms\n", compositor->ms_until_next_frame));
 		if (compositor->ms_until_next_frame > 2) {
 			u64 start = gf_sys_clock_high_res();
