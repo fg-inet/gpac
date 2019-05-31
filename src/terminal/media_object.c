@@ -585,11 +585,13 @@ char *gf_mo_fetch_data(GF_MediaObject *mo, GF_MOFetchMode resync, u32 upload_tim
 			else if (CU->next->dataLength && (CU->next->TS + 200 >= obj_time)) {
 				skip_resync = GF_TRUE;
 			} else {
-				GF_LOG(GF_LOG_DEBUG, GF_LOG_MEDIA, ("[ODM%d] At %u frame TS %u next frame TS %d too late in no-drop mode, enabling drop - resync mode %d\n", mo->odm->OD->objectDescriptorID, obj_time, CU->TS, CU->next->TS, resync));
-				mo->flags |= GF_MO_IN_RESYNC;
+				GF_LOG(GF_LOG_DEBUG, GF_LOG_MEDIA, ("[ODM%d] At %u frame TS %u next frame TS %d but drop turned off\n", mo->odm->OD->objectDescriptorID, obj_time, CU->TS, CU->next->TS));
+				//GF_LOG(GF_LOG_DEBUG, GF_LOG_MEDIA, ("[ODM%d] At %u frame TS %u next frame TS %d too late in no-drop mode, enabling drop - resync mode %d\n", mo->odm->OD->objectDescriptorID, obj_time, CU->TS, CU->next->TS, resync));
+				//mo->flags |= GF_MO_IN_RESYNC;
 			}
 		}
 	}
+    skip_resync=GF_TRUE;
 
 	if (skip_resync) {
 		resync=GF_MO_FETCH;
