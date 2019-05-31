@@ -35,6 +35,10 @@
 #include "visual_manager.h"
 #include "texturing.h"
 
+#include <muacc/muacc_util.h>
+#define FRAME_DRAWING_FILE "frame_drawn.log"
+
+
 static void gf_sc_recompute_ar(GF_Compositor *compositor, GF_Node *top_node);
 
 #define SC_DEF_WIDTH	320
@@ -42,7 +46,7 @@ static void gf_sc_recompute_ar(GF_Compositor *compositor, GF_Node *top_node);
 
 void gf_sc_next_frame_state(GF_Compositor *compositor, u32 state)
 {
-//	GF_LOG(GF_LOG_DEBUG, GF_LOG_COMPOSE, ("[Compositor] Forcing frame redraw state: %d\n", state));
+	GF_LOG(GF_LOG_DEBUG, GF_LOG_COMPOSE, ("[Compositor] Forcing frame redraw state: %d at "LLU"\n", state, gf_net_get_utc()));
 	if (state==GF_SC_DRAW_FLUSH) {
 		if (!compositor->skip_flush)
 			compositor->skip_flush = 2;
@@ -266,6 +270,7 @@ static void gf_sc_reconfig_task(GF_Compositor *compositor)
 GF_EXPORT
 Bool gf_sc_draw_frame(GF_Compositor *compositor, Bool no_flush, s32 *ms_till_next)
 {
+	GF_LOG(GF_LOG_DEBUG, GF_LOG_COMPOSE, ("[Compositor] Drawing frame at"LLU"\n", gf_net_get_utc()));
 	Bool ret = GF_FALSE;
 
 	if (no_flush)
@@ -280,7 +285,10 @@ Bool gf_sc_draw_frame(GF_Compositor *compositor, Bool no_flush, s32 *ms_till_nex
 			*ms_till_next = compositor->ms_until_next_frame;
 	}
 	//next frame is late, we should redraw
-	if (compositor->ms_until_next_frame < 0) ret = GF_TRUE;
+	if (compositor->ms_until_next_frame < 0) {
+        ret = GF_TRUE;
+        GF_LOG(GF_LOG_DEBUG, GF_LOG_COMPOSE, ("[Compositor] Next frame is late at"LLU"\n", gf_net_get_utc()));
+    }
 	else if (compositor->frame_draw_type) ret = GF_TRUE;
 	else if (compositor->fonts_pending) ret = GF_TRUE;
 
@@ -979,7 +987,7 @@ GF_Err gf_sc_set_scene(GF_Compositor *compositor, GF_SceneGraph *scene_graph)
 
 	gf_sc_lock(compositor, 1);
 	if (scene_graph && !compositor->scene) {
-		GF_LOG(GF_LOG_INFO, GF_LOG_COMPOSE, ("[Compositor] Attaching new scene\n"));
+		GF_LOG(GF_LOG_INFO, GF_LOG_COMPOSE, ("[Compositor] Attaching new scene at"LLU"\n", gf_net_get_utc()));
 	} else if (!scene_graph && compositor->scene) {
 		GF_LOG(GF_LOG_INFO, GF_LOG_COMPOSE, ("[Compositor] Detaching scene\n"));
 	}
@@ -2342,7 +2350,9 @@ static void gf_sc_draw_scene(GF_Compositor *compositor)
 #ifdef GF_SR_USE_VIDEO_CACHE
 	gf_list_reset(compositor->cached_groups_queue);
 #endif
-	GF_LOG(GF_LOG_DEBUG, GF_LOG_COMPOSE, ("[Compositor] Frame %d - drawing done\n", compositor->frame_number));
+    u64 current_time = gf_net_get_utc();
+	GF_LOG(GF_LOG_DEBUG, GF_LOG_COMPOSE, ("[Compositor] Frame %d - drawing done at "LLU"\n", compositor->frame_number, current_time));
+    _muacc_logtofile(FRAME_DRAWING_FILE, "%d,"LLU"\n", compositor->frame_number, current_time);
 
 	/*only send the resize notification once the frame has been dra*/
 	if (compositor->recompute_ar) {
@@ -2698,7 +2708,7 @@ void gf_sc_render_frame(GF_Compositor *compositor)
 		else {
 			compositor->frame_draw_type = 0;
 
-			GF_LOG(GF_LOG_DEBUG, GF_LOG_COMPOSE, ("[Compositor] Redrawing scene - STB %d\n", compositor->scene_sampled_clock));
+			GF_LOG(GF_LOG_DEBUG, GF_LOG_COMPOSE, ("[Compositor] Redrawing scene at "LLU" - STB %d\n", gf_net_get_utc(), compositor->scene_sampled_clock));
 			gf_sc_draw_scene(compositor);
 #ifndef GPAC_DISABLE_LOG
 			traverse_time = gf_sys_clock() - traverse_time;

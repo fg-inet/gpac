@@ -43,6 +43,9 @@
 # define TexEnvType Float
 #endif
 
+#include <muacc/muacc_util.h>
+#define INITIAL_PLAYOUT_DELAY_LOG_FILE "initial_playout.log"
+int already_drawn_yuv = 0;
 
 /*tx flags*/
 enum
@@ -1347,10 +1350,16 @@ push_exit:
 
 	txh->nb_frames ++;
 	txh->upload_time += push_time;
+    if (! already_drawn_yuv && txh->tx_io->yuv_shader) {
+        u64 current_time = gf_net_get_utc();
+        fprintf(stderr, "First YUV texture - this may be initial playout at "LLU"\n", current_time);
+        _muacc_logtofile(INITIAL_PLAYOUT_DELAY_LOG_FILE, LLU"\n", current_time);
+        already_drawn_yuv = 1;
+    }
 
 #ifndef GPAC_DISABLE_LOGS
 			gf_mo_get_object_time(txh->stream, &ck);
-			GF_LOG(GF_LOG_DEBUG, GF_LOG_MEDIA, ("[GL Texture] Texture (CTS %u) %d ms after due date - Pushed %s in %d ms - average push time %d ms (PBO enabled %s)\n", txh->last_frame_time, ck - txh->last_frame_time, txh->tx_io->yuv_shader ? "YUV textures" : "texture", push_time, txh->upload_time / txh->nb_frames, txh->tx_io->pbo_pushed ? "yes" : "no"));
+			GF_LOG(GF_LOG_DEBUG, GF_LOG_MEDIA, ("[GL Texture] at "LLU" Texture (CTS %u) %d ms after due date - Pushed %s in %d ms - average push time %d ms (PBO enabled %s)\n", gf_net_get_utc(), txh->last_frame_time, ck - txh->last_frame_time, txh->tx_io->yuv_shader ? "YUV textures" : "texture", push_time, txh->upload_time / txh->nb_frames, txh->tx_io->pbo_pushed ? "yes" : "no"));
 #endif
 	return 1;
 

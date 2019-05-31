@@ -33,13 +33,6 @@
 #include "media_control.h"
 #include "input_sensor.h"
 
-#include <muacc/muacc_util.h>
-#define INITIAL_PLAYOUT_DELAY_LOG_FILE "initial_playout.log"
-
-int already_decoded_something = 0;
-u64 previous_decode = 0;
-
-
 GF_Err Codec_Load(GF_Codec *codec, GF_ESD *esd, u32 PL);
 GF_Err gf_codec_process_raw_media_pull(GF_Codec *codec, u32 TimeAvailable);
 
@@ -1508,7 +1501,7 @@ static GF_Err MediaCodec_Process(GF_Codec *codec, u32 TimeAvailable)
 			}
 		}
 		if ( LockCompositionUnit(codec, AU->CTS, &CU, &unit_size) == GF_OUT_OF_MEM) {
-			GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] Exit decode loop because no more space in composition buffer\n", codec->decio->module_name ));
+			GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] Exit decode loop at %u because no more space in composition buffer\n", codec->decio->module_name, gf_clock_real_time(ch->clock)));
 			return GF_OK;
 		}
 
@@ -1527,27 +1520,12 @@ scalable_retry:
 			unit_size = 0;
 			GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] ODM%d: force drop requested in fast playback for AU CTS %u\n", codec->decio->module_name, codec->odm->OD->objectDescriptorID, AU->CTS));
 		} else {
-			if (already_decoded_something < 2) {
-				already_decoded_something = 1;
-				u64 current_time = gf_net_get_utc();
-				fprintf(stderr, "Decode at "LLU"\n", current_time);
-				if (previous_decode > 0) {
-					int decodediff = current_time - previous_decode;
-					fprintf(stderr, "Previous decode at "LLU" -- %d ms ago\n", previous_decode, decodediff);
-					if (decodediff > 1000) {
-						fprintf(stderr, "First decode after long time -- this might be initial playout at "LLU"\n", current_time);
-						_muacc_logtofile(INITIAL_PLAYOUT_DELAY_LOG_FILE, LLU"\n", current_time);
-						already_decoded_something = 2;
-					}
-				}
-				previous_decode = current_time;
-			}
 			GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] At %u ODM%d ES%d (%s) decoding frame DTS %u CTS %u size %d (%d in channels)\n", codec->decio->module_name, gf_clock_real_time(ch->clock), codec->odm->OD->objectDescriptorID, ch->esd->ESID, ch->odm->net_service->url, AU->DTS, AU->CTS, AU->dataLength, ch->AU_Count));
 			e = mdec->ProcessData(mdec, AU->data, AU->dataLength, ch->esd->ESID, &CU->TS, CU->data, &unit_size, AU->PaddingBits, mmlevel);
 		}
 		now = gf_sys_clock_high_res() - now;
 		if (codec->Status == GF_ESM_CODEC_STOP) {
-			GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] Exit decode loop because codec has been stopped\n", codec->decio->module_name));
+			GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] Exit decode loop at %u because codec has been stopped\n", codec->decio->module_name, gf_clock_real_time(ch->clock)));
 			return GF_OK;
 		}
 		/*input is too small, resize composition memory*/
@@ -1752,7 +1730,7 @@ scalable_retry:
 
 		if (e) {
 			UnlockCompositionUnit(codec, CU, unit_size);
-			GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] Exit decode loop because error %s\n", codec->decio->module_name, gf_error_to_string(e) ));
+			GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] Exit decode loop at %u because error %s\n", codec->decio->module_name, gf_clock_real_time(ch->clock), gf_error_to_string(e) ));
 			return e;
 		}
 
@@ -1807,7 +1785,7 @@ scalable_retry:
 			GF_LOG(GF_LOG_DEBUG, GF_LOG_MEDIA, ("[%s] at %u dispatched frame CTS %u in CB\n", codec->decio->module_name, gf_clock_real_time(prev_ch->clock), CU->TS));
 		}
 		if (!ch || !AU) {
-			GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] Exit decode loop because no more input data\n", codec->decio->module_name));
+			GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] Exit decode loop at %u because no more input data\n", codec->decio->module_name, gf_clock_real_time(ch->clock)));
 			return GF_OK;
 		}
 		if (force_skip) continue;
@@ -1816,17 +1794,17 @@ scalable_retry:
 		/*escape from decoding loop only if above critical limit - this is to avoid starvation on audio*/
 		if (!ch->esd->dependsOnESID && (codec->CB->UnitCount > codec->CB->Min)) {
 			if (now >= TimeAvailable) {
-				GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] Exit decode loop because time is up: %d vs %d us available\n", codec->decio->module_name, now, TimeAvailable));
+				GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] Exit decode loop at %u because time is up: %d vs %d us available\n", codec->decio->module_name, gf_clock_real_time(ch->clock), now, TimeAvailable));
 				return GF_OK;
 			}
 		} else if (now >= TimeAvailable) {
-			GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] Exit decode loop because running for too long: %d vs %d us available\n", codec->decio->module_name, now, TimeAvailable));
+			GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] Exit decode loop at %u because running for too long: %d vs %d us available\n", codec->decio->module_name, gf_clock_real_time(ch->clock), now, TimeAvailable));
 			return GF_OK;
 		} else if (codec->odm->term->bench_mode) {
 			return GF_OK;
 		}
 	}
-	GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] Exit decode loop because no more space in CB\n", codec->decio->module_name));
+	GF_LOG(GF_LOG_DEBUG, GF_LOG_CODEC, ("[%s] Exit decode loop at %u because no more space in CB\n", codec->decio->module_name, gf_clock_real_time(ch->clock)));
 	return GF_OK;
 }
 
