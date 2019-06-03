@@ -73,6 +73,7 @@
 
 static u32 FFDemux_Run(void *par)
 {
+    GF_LOG(GF_LOG_ERROR, GF_LOG_NETWORK, ("[FFMPEG Demuxer] FFDemux_Run "LLU"\n", gf_net_get_utc()) );
 	AVPacket pkt;
 	s64 seek_to;
 	GF_NetworkCommand com;
@@ -184,6 +185,7 @@ static u32 FFD_RegisterMimeTypes(const GF_InputService *plug) {
 }
 
 static int open_file(AVFormatContext **	ic_ptr, const char * 	filename, AVInputFormat * 	fmt, void *ops) {
+    GF_LOG(GF_LOG_ERROR, GF_LOG_NETWORK, ("[Network for FFMPEG Demuxer] open_file at "LLU"\n", gf_net_get_utc()) );
 #ifdef USE_PRE_0_7
 	return av_open_input_file(ic_ptr, filename, fmt, 0, NULL);
 #else
@@ -193,6 +195,7 @@ static int open_file(AVFormatContext **	ic_ptr, const char * 	filename, AVInputF
 
 void ffd_parse_options(FFDemux *ffd, const char *url)
 {
+    GF_LOG(GF_LOG_ERROR, GF_LOG_NETWORK, ("[Network for FFMPEG Demuxer] ffd_parse_options at "LLU"\n", gf_net_get_utc()) );
 #ifdef USE_AVFORMAT_OPEN_INPUT
 	int res;
 	char *frag = (char*) strchr(url, '#');
@@ -222,6 +225,7 @@ void ffd_parse_options(FFDemux *ffd, const char *url)
 
 static Bool FFD_CanHandleURL(GF_InputService *plug, const char *url)
 {
+    GF_LOG(GF_LOG_ERROR, GF_LOG_NETWORK, ("[Network for FFMPEG Demuxer] FFD_CanHandleURL at "LLU"\n", gf_net_get_utc()) );
 	Bool has_audio, has_video;
 	s32 i;
 	AVFormatContext *ctx;
@@ -287,6 +291,8 @@ static Bool FFD_CanHandleURL(GF_InputService *plug, const char *url)
 	}
 
 	ffd_parse_options(ffd, url);
+    // Do not send these weird requests anymore...
+    return GF_FALSE;
 
 	ctx = NULL;
 	if (open_file(&ctx, szName, NULL, ffd->options ? &ffd->options : NULL)<0) {
@@ -358,6 +364,7 @@ exit:
 
 static GF_ESD *FFD_GetESDescriptor(FFDemux *ffd, Bool for_audio)
 {
+    GF_LOG(GF_LOG_ERROR, GF_LOG_NETWORK, ("[Network for FFMPEG Demuxer] FFD_GETESDescriptor at "LLU"\n", gf_net_get_utc()) );
 	GF_BitStream *bs;
 	Bool dont_use_sl;
 	GF_ESD *esd = (GF_ESD *) gf_odf_desc_esd_new(0);
@@ -484,6 +491,7 @@ opaque_video:
 
 static void FFD_SetupObjects(FFDemux *ffd)
 {
+    GF_LOG(GF_LOG_ERROR, GF_LOG_NETWORK, ("[Network for FFMPEG Demuxer] FFD_SetupObjects at "LLU"\n", gf_net_get_utc()) );
 	GF_ESD *esd;
 	GF_ObjectDescriptor *od;
 	u32 audio_esid = 0;
@@ -509,6 +517,7 @@ static void FFD_SetupObjects(FFDemux *ffd)
 #ifdef USE_PRE_0_7
 static int ff_url_read(void *h, unsigned char *buf, int size)
 {
+    GF_LOG(GF_LOG_ERROR, GF_LOG_NETWORK, ("[Network for FFMPEG Demuxer] ff_url_read at "LLU"\n", gf_net_get_utc()) );
 	u32 retry = 10;
 	u32 read;
 	int full_size;
@@ -530,6 +539,7 @@ static int ff_url_read(void *h, unsigned char *buf, int size)
 		ffd->buffer_used = 0;
 	}
 
+    GF_LOG(GF_LOG_ERROR, GF_LOG_NETWORK, ("[Network for FFMPEG Demuxer] going to fetch bytes from network at "LLU"\n", gf_net_get_utc()) );
 	while (size) {
 		GF_Err e = gf_dm_sess_fetch_data(ffd->dnload, buf, size, &read);
 		if (e==GF_EOS) break;
@@ -562,6 +572,7 @@ static int ff_url_read(void *h, unsigned char *buf, int size)
 
 static GF_Err FFD_ConnectService(GF_InputService *plug, GF_ClientService *serv, const char *url)
 {
+    GF_LOG(GF_LOG_ERROR, GF_LOG_NETWORK, ("[Network for FFMPEG Demuxer] FFD_ConnectService at "LLU"\n", gf_net_get_utc()) );
 	GF_Err e;
 	s64 last_aud_pts;
 	u32 i;
@@ -816,6 +827,7 @@ static GF_Descriptor *FFD_GetServiceDesc(GF_InputService *plug, u32 expect_type,
 
 static GF_Err FFD_CloseService(GF_InputService *plug)
 {
+    GF_LOG(GF_LOG_ERROR, GF_LOG_NETWORK, ("[Network for FFMPEG Demuxer] FFD_ConnectService at "LLU"\n", gf_net_get_utc()) );
 	FFDemux *ffd = (FFDemux*)plug->priv;
 
 	ffd->is_running = 0;
