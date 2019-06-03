@@ -1209,8 +1209,9 @@ static void progress_quiet(const void *cbck, const char *title, u64 done, u64 to
 
 int mp4client_main(int argc, char **argv)
 {
-	_muacc_logtofile(INITIAL_PLAYOUT_DELAY_LOG_FILE, LLU",", gf_net_get_utc());
-	printf("Starting player...\n");
+    u64 current_time = gf_net_get_utc();
+	_muacc_logtofile(INITIAL_PLAYOUT_DELAY_LOG_FILE, "\n"LLU",", current_time);
+	printf("Starting player at "LLU"...\n", current_time);
 	char c;
 	const char *str;
 	int ret_val = 0;

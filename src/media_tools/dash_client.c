@@ -43,7 +43,6 @@
 
 #include <math.h>
 
-#define ABR_SWITCHING_LOG_FILE "switching.log"
 #define INITIAL_PLAYOUT_DELAY_LOG_FILE "initial_playout.log"
 #define ABR_LOG_FILE "abr.log"
 #define DOWNLOADTIME_LOG_FILE "download.log"
@@ -3309,7 +3308,6 @@ static void dash_do_rate_adaptation(GF_DashClient *dash, GF_DASH_Group *group)
 		GF_LOG(GF_LOG_DEBUG, GF_LOG_DASH, ("[DASH] AS#%d switching after playing %d segments, from rep %d to rep %d\n", 1 + gf_list_find(group->period->adaptation_sets, group->adaptation_set),
 				group->nb_segments_since_switch, group->active_rep_index, new_index));
 
-		_muacc_logtofile(ABR_SWITCHING_LOG_FILE, "%d,%d,%d,%d\n", 1 + gf_list_find(group->period->adaptation_sets, group->adaptation_set), group->nb_segments_since_switch, group->active_rep_index, new_index);
 		group->nb_segments_since_switch = 0;
 
 		if (force_lower_complexity) {
