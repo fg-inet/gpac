@@ -596,13 +596,42 @@ GF_Err gf_sk_connect(char *url, GF_Socket *sock, const char *PeerName, u16 PortN
         struct socketopt category;
         category.level = SOL_INTENTS;
         category.optname = INTENT_CATEGORY;
-        intent_category_t intent_val;
-        intent_val = INTENT_STREAM;
-        category.optval = &intent_val;
+        intent_category_t category_val;
+        if (sock->next_bitrate == 0) {
+            // We are not loading video segments yet -- this is a short query
+            // for .mpd or init segments
+            category_val = INTENT_QUERY;
+        } else {
+            category_val = INTENT_BULKTRANSFER;
+        }
+        category.optval = &category_val;
         category.optlen = sizeof(int);
         category.flags = 0;
         category.returnvalue = 0;
-        category.next = 0;
+
+        //setting up the socket intent for bitrate intent
+        struct socketopt bitrate;
+        bitrate.level = SOL_INTENTS;
+        bitrate.optname = INTENT_BITRATE;
+        int bitrate_val = sock->next_bitrate;
+        bitrate.optval = &bitrate_val;
+        bitrate.optlen = sizeof(int);
+        bitrate.flags = 0;
+        bitrate.returnvalue = 0;
+
+        //setting up the socket intent for duration intent
+        struct socketopt duration;
+        duration.level = SOL_INTENTS;
+        duration.optname = INTENT_DURATION;
+        int duration_val = sock->buffer_status;
+        duration.optval = &duration_val;
+        duration.optlen = sizeof(int);
+        duration.flags = 0;
+        duration.returnvalue = 0;
+
+        category.next = &bitrate;
+        bitrate.next = &duration;
+        duration.next = 0;
 
         socketopt_t *optpointer=&category;
         size_t hostlen = strlen(PeerName);
@@ -613,10 +642,15 @@ GF_Err gf_sk_connect(char *url, GF_Socket *sock, const char *PeerName, u16 PortN
        size_t servlen = strlen(serv);
 
 
-       if(debugOutput_1){printf("\tcalling socketconnect from os_net: socket %d \n", *sockpointer);}
+       if(debugOutput_1){
+            printf("\tIntent Category: %d \n", category_val);
+            printf("\tIntent Bitrate: %d \n", bitrate_val);
+            printf("\tIntent Duration: %d \n", duration_val);
+            printf("\tcalling socketconnect from os_net: socket %d \n", *sockpointer);
+       }
+
        ret = socketconnect(sockpointer, PeerName, hostlen, serv, servlen, optpointer, AF_UNSPEC, type, 0);
 
-        // dies ist ein testoutput
        if(debugOutput_1){printf("return of socketconnect: socket %d, status %d \n", *sockpointer, ret);}
 
         //check if socket connected successfully

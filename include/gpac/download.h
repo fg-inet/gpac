@@ -431,6 +431,16 @@ const char *gf_dm_sess_get_resource_name(GF_DownloadSession *sess);
  */
 const char *gf_dm_sess_get_original_resource_name(GF_DownloadSession *sess);
 
+/*!
+ *\brief sets Socket Intents
+ *
+ *Sets Intents for next segment: Bitrate and duration
+ *\param sess the download session
+ *\param next_bitrate bitrate of the representation of the next segment
+ *\param buffer_status current status of the playout buffer in seconds
+ */
+GF_Err gf_dm_sess_set_intents(GF_DownloadSession *sess, u32 next_bitrate, u32 buffer_status);
+
 #ifndef GPAC_DISABLE_CORE_TOOLS
 /*!
  * \brief Download a file over the network using a download manager

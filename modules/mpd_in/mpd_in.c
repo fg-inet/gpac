@@ -670,6 +670,10 @@ GF_Err mpdin_dash_io_set_range(GF_DASHFileIO *dashio, GF_DASHFileIOSession sessi
 {
 	return gf_dm_sess_set_range((GF_DownloadSession *)session, start_range, end_range, discontinue_cache);
 }
+GF_Err mpdin_dash_io_set_intents(GF_DASHFileIO *dashio, GF_DASHFileIOSession session, u32 next_bitrate, u32 buffer_status)
+{
+	return gf_dm_sess_set_intents((GF_DownloadSession *)session, next_bitrate, buffer_status);
+}
 GF_Err mpdin_dash_io_init(GF_DASHFileIO *dashio, GF_DASHFileIOSession session)
 {
 	return gf_dm_sess_process_headers((GF_DownloadSession *)session);
@@ -999,6 +1003,7 @@ GF_Err MPD_ConnectService(GF_InputService *plug, GF_ClientService *serv, const c
 	mpdin->dash_io.get_total_size = mpdin_dash_io_get_total_size;
 	mpdin->dash_io.get_bytes_done = mpdin_dash_io_get_bytes_done;
 	mpdin->dash_io.on_dash_event = mpdin_dash_io_on_dash_event;
+	mpdin->dash_io.set_intents = mpdin_dash_io_set_intents;
 
 	max_cache_duration = 0;
 	opt = gf_modules_get_option((GF_BaseInterface *)plug, "Network", "BufferLength");

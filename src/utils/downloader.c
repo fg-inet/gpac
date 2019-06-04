@@ -216,6 +216,7 @@ struct __gf_download_session
 	u32 remaining_data_size;
 
 	Bool local_cache_only;
+	u32 next_bitrate, buffer_status;
 };
 
 struct __gf_download_manager
@@ -1129,14 +1130,42 @@ GF_Err gf_dm_sess_setup_from_url(GF_DownloadSession *sess, const char *url)
     struct socketopt category;
     category.level = SOL_INTENTS;
     category.optname = INTENT_CATEGORY;
-    intent_category_t intent_val;
-    intent_val = INTENT_STREAM;
-    category.optval = &intent_val;
+    intent_category_t category_val;
+    if (sess->next_bitrate == 0) {
+        // We are not loading video segments yet -- this is a short query
+        // for .mpd or init segments
+        category_val = INTENT_QUERY;
+    } else {
+        category_val = INTENT_BULKTRANSFER;
+    }
+    category.optval = &category_val;
     category.optlen = sizeof(int);
     category.flags = 0;
     category.returnvalue = 0;
 
-    category.next = 0;
+    //setting up the socket intent for bitrate intent
+    struct socketopt bitrate;
+    bitrate.level = SOL_INTENTS;
+    bitrate.optname = INTENT_BITRATE;
+    int bitrate_val = (int) sess->next_bitrate;
+    bitrate.optval = &bitrate_val;
+    bitrate.optlen = sizeof(int);
+    bitrate.flags = 0;
+    bitrate.returnvalue = 0;
+
+    //setting up the socket intent for duration intent
+    struct socketopt duration;
+    duration.level = SOL_INTENTS;
+    duration.optname = INTENT_DURATION;
+    int duration_val = (int) sess->buffer_status;
+    duration.optval = &duration_val;
+    duration.optlen = sizeof(int);
+    duration.flags = 0;
+    duration.returnvalue = 0;
+
+    category.next = &bitrate;
+    bitrate.next = &duration;
+    duration.next = 0;
 
     socketopt_t *optpointer= &category;
     //original call
@@ -1159,7 +1188,10 @@ GF_Err gf_dm_sess_setup_from_url(GF_DownloadSession *sess, const char *url)
 			//printf("content of session variable: %p \n", sess);
 			//printf("content of sess->sock: %p \n", sess->sock);
 			//printf("content of sess->sock->socket: %d \n", sess->sock->socket);
-			printf("\tBefore socketconnect: socket %d [host %s, port %s] \n", *sockpointer, info.server_name, serv);
+			printf("\tIntent Category: %d \n", category_val);
+			printf("\tIntent Bitrate: %d \n", bitrate_val);
+			printf("\tIntent Duration: %d \n", duration_val);
+			printf("\tBefore socketconnect in downloader.c: socket %d [host %s, port %s] \n", *sockpointer, info.server_name, serv);
 		}
 
         muaccret = socketconnect(sockpointer, info.server_name, hostlen, serv, servlen, optpointer, 0, type, 0);
@@ -1818,6 +1850,46 @@ GF_Err gf_dm_sess_set_range(GF_DownloadSession *sess, u64 start_range, u64 end_r
 	sess->range_start = start_range;
 	sess->range_end = end_range;
 	sess->needs_range = GF_TRUE;
+	return GF_OK;
+}
+
+GF_EXPORT
+GF_Err gf_dm_sess_set_intents(GF_DownloadSession *sess, u32 next_bitrate, u32 buffer_status)
+{
+	if (!sess) return GF_BAD_PARAM;
+	/*if (sess->cache_entry) {
+		if (!discontinue_cache) {
+			if (gf_cache_get_end_range(sess->cache_entry) + 1 != start_range)
+				return GF_NOT_SUPPORTED;
+		}
+		if (!sess->sock)
+			return GF_BAD_PARAM;
+		if (sess->status != GF_NETIO_CONNECTED) {
+			if (sess->status != GF_NETIO_DISCONNECTED) {
+				return GF_BAD_PARAM;
+			}
+		}
+		sess->status = GF_NETIO_CONNECTED;
+		sess->num_retry = SESSION_RETRY_COUNT;
+		if (!discontinue_cache) {
+			gf_cache_set_end_range(sess->cache_entry, end_range);
+			//remember this in case we get disconnected
+			sess->is_range_continuation = GF_TRUE;
+		} else {
+			sess->needs_cache_reconfig = 2;
+			sess->reused_cache_entry = GF_FALSE;
+		}
+	} else {
+		if (sess->status != GF_NETIO_SETUP) return GF_BAD_PARAM;
+	}
+	sess->range_start = start_range;
+	sess->range_end = end_range;
+	sess->needs_range = GF_TRUE;*/
+	if(debugOutput_1){printf("gf_dm_sess_set_intents called with bitrate %d and buffer_status %d, sess->status: %d, socket: %d \n", next_bitrate, buffer_status, sess->status, sess->sock == NULL ? 0 : sess->sock->socket);}
+	sess->next_bitrate = next_bitrate;
+	sess->buffer_status = buffer_status;
+	sess->sock->next_bitrate = next_bitrate;
+	sess->sock->buffer_status = buffer_status;
 	return GF_OK;
 }
 

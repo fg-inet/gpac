@@ -399,6 +399,7 @@
 #pragma comment (linker, EXPORT_SYMBOL(gf_dm_sess_setup_from_url) )
 #pragma comment (linker, EXPORT_SYMBOL(gf_dm_get_file_memory) )
 #pragma comment (linker, EXPORT_SYMBOL(gf_dm_get_global_rate) )
+#pragma comment (linker, EXPORT_SYMBOL(gf_dm_sess_set_intents) )
 
 
 

@@ -232,6 +232,7 @@ typedef struct __tag_socket{
 #endif
 	u32 dest_addr_len;
     u32 usec_wait;
+    u32 next_bitrate, buffer_status;
 } GF_Socket;
 
 /*!

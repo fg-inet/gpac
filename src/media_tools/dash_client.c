@@ -25,6 +25,7 @@
 
 #include <gpac/thread.h>
 #include <gpac/network.h>
+#include <gpac/download.h>
 #include <gpac/dash.h>
 #include <gpac/internal/mpd.h>
 #include <gpac/internal/m3u8.h>
@@ -2798,6 +2799,10 @@ static s32 dash_do_rate_adaptation_legacy_rate(GF_DashClient *dash, GF_DASH_Grou
         _muacc_logtofile(ABR_LOG_FILE, "%d,%d,%d,%d,%d\n", segment_counter, group->active_rep_index, group->buffer_occupancy_ms, dl_rate, group->buffer_max_ms);
     }
 
+    if(debugOutput_1){printf("At the end of legacy rate ABR: bitrate of next segment = %d, buffer status = %d \n", new_rep->bandwidth, group->buffer_occupancy_ms);}
+
+    GF_Err e = group->dash->dash_io->set_intents(group->dash->dash_io, group->segment_download, (u32) new_rep->bandwidth, (u32) group->buffer_occupancy_ms);
+
 	return new_index;
 }
 
@@ -2877,6 +2882,10 @@ static s32 dash_do_rate_adaptation_legacy_buffer(GF_DashClient *dash, GF_DASH_Gr
 	segment_counter++;
 	_muacc_logtofile(ABR_LOG_FILE, "%d,%d,%d,%d,%d\n", segment_counter, group->active_rep_index, group->buffer_occupancy_ms, dl_rate, group->buffer_max_ms);
 
+    GF_MPD_Representation *new_rep = gf_list_get(group->adaptation_set->representations, new_index);
+    if(debugOutput_1){printf("At the end of legacy buffer ABR: bitrate of next segment = %d, buffer status = %d \n", new_rep->bandwidth, group->buffer_occupancy_ms);}
+
+    GF_Err e = group->dash->dash_io->set_intents(group->dash->dash_io, group->segment_download, (u32) new_rep->bandwidth, (u32) group->buffer_occupancy_ms);
 	return new_index;
 }
 
@@ -3024,6 +3033,10 @@ static s32 dash_do_rate_adaptation_bba0(GF_DashClient *dash, GF_DASH_Group *grou
 	segment_counter++;
 	_muacc_logtofile(ABR_LOG_FILE, "%d,%d,%d,%d,%d\n", segment_counter, group->active_rep_index, group->buffer_occupancy_ms, dl_rate, group->buffer_max_ms);
 
+    GF_MPD_Representation *new_rep = gf_list_get(group->adaptation_set->representations, new_index);
+    if(debugOutput_1){printf("At the end of BBA-0 ABR: bitrate of next segment = %d, buffer status = %d \n", new_rep->bandwidth, group->buffer_occupancy_ms);}
+
+    GF_Err e = group->dash->dash_io->set_intents(group->dash->dash_io, group->segment_download, (u32) new_rep->bandwidth, (u32) group->buffer_occupancy_ms);
 	return new_index;
 }
 
@@ -3162,6 +3175,16 @@ static s32 dash_do_rate_adaptation_bola(GF_DashClient *dash, GF_DASH_Group *grou
 
 	segment_counter++;
 	_muacc_logtofile(ABR_LOG_FILE, "%d,%d,%d,%d,%d\n", segment_counter, group->active_rep_index, group->buffer_occupancy_ms, dl_rate, group->buffer_max_ms);
+
+    GF_MPD_Representation *new_rep = gf_list_get(group->adaptation_set->representations, new_index);
+    if(debugOutput_1){printf("At the end of BOLA ABR: bitrate of next segment = %d, buffer status = %d \n", new_rep->bandwidth, group->buffer_occupancy_ms);}
+
+	u32 download_rate, set_idx, time_since_start, done, tot_size, time_until_end;
+	tot_size = group->dash->dash_io->get_total_size(group->dash->dash_io, group->segment_download);
+	done = group->dash->dash_io->get_bytes_done(group->dash->dash_io, group->segment_download);
+	download_rate = group->dash->dash_io->get_bytes_per_sec(group->dash->dash_io, group->segment_download);
+    if(debugOutput_1){printf("total size %d, done %d, download_rate %d\n", tot_size, done, download_rate);}
+    GF_Err e = group->dash->dash_io->set_intents(group->dash->dash_io, group->segment_download, (u32) new_rep->bandwidth, (u32) group->buffer_occupancy_ms);
 
 	return new_index;
 }
@@ -3695,6 +3718,8 @@ static GF_Err gf_dash_download_init_segment(GF_DashClient *dash, GF_DASH_Group *
 			}
 		}
 	}
+	GF_LOG(GF_LOG_DEBUG, GF_LOG_DASH, ("[DASH] All initial segments done, rep now %d\n", rep->bandwidth));
+    e = group->dash->dash_io->set_intents(group->dash->dash_io, group->segment_download, (u32) rep->bandwidth, 0);
 
 	return GF_OK;
 }
@@ -5017,6 +5042,8 @@ select_active_rep:
 		if (rep_sel->playback.disabled)
 			goto select_active_rep;
 
+		GF_LOG(GF_LOG_DEBUG, GF_LOG_DASH, ("[DASH] Chose initial representation bitrate %d\n", rep_sel->bandwidth));
+
 		//adjust seek
 		if (dash->start_range_period) {
 			gf_dash_seek_group(dash, group, dash->start_range_period, 0);
@@ -6004,6 +6031,7 @@ restart_period:
 		if (e) break;
 	}
 	first_period_in_mpd = 0;
+	GF_LOG(GF_LOG_DEBUG, GF_LOG_DASH, ("[DASH] end of whatever loop\n"));
 
 	/*if error signal to the user*/
 	if (e != GF_OK) {

@@ -146,6 +146,8 @@ struct _gf_dash_io
 	u32 (*get_total_size)(GF_DASHFileIO *dashio, GF_DASHFileIOSession session);
 	/*get the total size on bytes for the session*/
 	u32 (*get_bytes_done)(GF_DASHFileIO *dashio, GF_DASHFileIOSession session);
+
+	GF_Err (*set_intents)(GF_DASHFileIO *dashio, GF_DASHFileIOSession session, u32 next_bitrate, u32 buffer_status);
 };
 
 typedef struct __dash_client GF_DashClient;
