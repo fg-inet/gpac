@@ -1180,7 +1180,7 @@ GF_Err gf_dm_sess_setup_from_url(GF_DownloadSession *sess, const char *url)
     size_t servlen = strlen(serv);
 
 
-    int muaccret = NULL;
+    int muaccret = 0;
     // if we are in status == GF_NETIO_SETUP, the first socketconnect() will be called by gf_sk_connect()
 	// because it has to initialize some data structure
     if(sess->status != GF_NETIO_SETUP) {
