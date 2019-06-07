@@ -1353,7 +1353,7 @@ push_exit:
     if (! already_drawn_yuv && txh->tx_io->yuv_shader) {
         u64 current_time = gf_net_get_utc();
         fprintf(stderr, "First YUV texture - this may be initial playout at "LLU"\n", current_time);
-        _muacc_logtofile(INITIAL_PLAYOUT_DELAY_LOG_FILE, LLU, current_time);
+        _muacc_logtofile(INITIAL_PLAYOUT_DELAY_LOG_FILE, LLU",", current_time);
         already_drawn_yuv = 1;
     }
 
