@@ -736,7 +736,7 @@ static void gf_dm_clear_headers(GF_DownloadSession *sess)
 
 static void gf_dm_disconnect(GF_DownloadSession *sess, Bool force_close)
 {
-	if(debugOutput_1) {printf("gf_dm_disconnect: called, sess->status = %d \n", sess->status);}
+	if(debugOutput_1) {printf("gf_dm_disconnect: called, sess->status = %d (session with next segment %d)\n", sess->status, sess->next_bitrate);}
 
 	assert( sess );
 	if (sess->connection_close) force_close = GF_TRUE;
@@ -1527,7 +1527,7 @@ static Bool rfc2818_match(const char *pattern, const char *string)
 
 static void gf_dm_connect(GF_DownloadSession *sess)
 {
-	if(debugOutput_1){printf("gf_dm_connect called, sess->status: %d, socket: %d\n", sess->status, sess->sock == NULL ? 0 : sess->sock->socket);}
+	if(debugOutput_1){printf("gf_dm_connect called, sess->status: %d, socket: %d, next bitrate %d\n", sess->status, sess->sock == NULL ? 0 : sess->sock->socket, sess->next_bitrate);}
 	GF_Err e;
 	u16 proxy_port = 0;
 	const char *proxy, *ip;
@@ -1599,6 +1599,8 @@ static void gf_dm_connect(GF_DownloadSession *sess)
 		}
 
 		if(debugOutput_1){printf("gf_dm_connect: status is %d (GF_NETIO_SETUP), calling gf_sk_connect to %s\n", sess->status, sess->orig_url);}
+		sess->sock->next_bitrate = sess->next_bitrate;
+		sess->sock->buffer_status = sess->buffer_status;
 		now  =gf_sys_clock_high_res();
 		//e = gf_sk_connect(sess->sock, (char *) proxy, proxy_port, (char *)ip);
         // url is now also passed as parameter
