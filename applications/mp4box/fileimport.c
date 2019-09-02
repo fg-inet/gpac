@@ -2133,7 +2133,8 @@ GF_Err cat_isomedia_file(GF_ISOFile *dest, char *fileName, u32 import_flags, Dou
 	Bool is_isom;
 	GF_ISOSample *samp;
 	Double aligned_to_DTS = 0;
-
+	Bool use_separate_sample_description = GF_FALSE;
+	
 	if (is_pl) return cat_playlist(dest, fileName, import_flags, force_fps, frames_per_sample, tmp_dir, force_cat, align_timelines, allow_add_in_command);
 
 	if (strchr(fileName, '*')) return cat_multiple_files(dest, fileName, import_flags, force_fps, frames_per_sample, tmp_dir, force_cat, align_timelines, allow_add_in_command);
@@ -2271,10 +2272,24 @@ GF_Err cat_isomedia_file(GF_ISOFile *dest, char *fileName, u32 import_flags, Dou
 
 
 		if (dst_tk) {
-			if (mtype != gf_isom_get_media_type(dest, dst_tk))
+			if (mtype != gf_isom_get_media_type(dest, dst_tk)) {
 				dst_tk = 0;
-			else if (gf_isom_get_media_subtype(dest, dst_tk, 1) != gf_isom_get_media_subtype(orig, i+1, 1))
-				dst_tk = 0;
+			} else {
+				u32 dest_stype = gf_isom_get_media_subtype(dest, dst_tk, 1);
+				u32 orig_stype = gf_isom_get_media_subtype(orig, i+1, 1);
+				if (dest_stype != orig_stype) {
+					/* if one of the track is encrypted, we check if the non-encrypted types match */
+					if (gf_isom_is_media_encrypted(orig, i+1, 1)) {
+						gf_isom_get_original_format_type(orig, i+1, 1, &orig_stype);
+					}
+					if (gf_isom_is_media_encrypted(dest, dst_tk, 1)) {
+						gf_isom_get_original_format_type(dest, dst_tk, 1, &dest_stype);
+					}
+					if (dest_stype != orig_stype) {
+						dst_tk = 0;
+					}
+				}
+			}
 		}
 
 		if (!dst_tk) {
@@ -2323,12 +2338,26 @@ GF_Err cat_isomedia_file(GF_ISOFile *dest, char *fileName, u32 import_flags, Dou
 		if (dst_tk) {
 			u32 found_dst_tk = dst_tk;
 			u32 stype = gf_isom_get_media_subtype(dest, dst_tk, 1);
+			u32 orig_stype = gf_isom_get_media_subtype(orig, i+1, 1);
+			/* if one of the track is encrypted, we use the unencrypted types */
+			if (gf_isom_is_media_encrypted(orig, i+1, 1)) {
+				gf_isom_get_original_format_type(orig, i+1, 1, &orig_stype);
+				use_separate_sample_description = GF_TRUE;
+			}
+			if (gf_isom_is_media_encrypted(dest, dst_tk, 1)) {
+				gf_isom_get_original_format_type(dest, dst_tk, 1, &stype);
+				if (use_separate_sample_description) {
+					use_separate_sample_description = GF_FALSE;
+				} else {
+					use_separate_sample_description = GF_TRUE;
+				}
+			}
 			/*we MUST have the same codec*/
 			if (gf_isom_get_media_subtype(orig, i+1, 1) != stype) dst_tk = 0;
 			/*we only support cat with the same number of sample descriptions*/
 			if (gf_isom_get_sample_description_count(orig, i+1) != gf_isom_get_sample_description_count(dest, dst_tk)) dst_tk = 0;
 			/*if not forcing cat, check the media codec config is the same*/
-			if (!gf_isom_is_same_sample_description(orig, i+1, 0, dest, dst_tk, 0)) {
+			if (!use_separate_sample_description && !gf_isom_is_same_sample_description(orig, i+1, 0, dest, dst_tk, 0)) {
 				dst_tk = 0;
 			}
 			/*we force the same visual resolution*/
@@ -2342,8 +2371,33 @@ GF_Err cat_isomedia_file(GF_ISOFile *dest, char *fileName, u32 import_flags, Dou
 			}
 
 			if (!dst_tk) {
+				if (use_separate_sample_description) {
+					dst_tk = found_dst_tk;
+					// if the first sample description is not the encrypted one,
+					// we need to insert the encrypted one first and change the sample description index of all samples
+					if (!gf_isom_is_media_encrypted(dest, dst_tk, 1)) {
+						u32 new_di;
+						u32 sample_count;
+						e = gf_isom_clone_sample_description(dest, dst_tk, orig, i+1, 1, NULL, NULL, &new_di);
+						if (e) goto err_exit;
+						e = gf_isom_swap_sample_descriptions(dest, dst_tk, 1, new_di);
+						if (e) goto err_exit;
+						sample_count = gf_isom_get_sample_count(dest, dst_tk);
+						gf_isom_set_cts_packing(dest, dst_tk, GF_TRUE);
+						for (j=0; j<sample_count; j++) {
+							u32 dest_di;
+							samp = gf_isom_get_sample(dest, dst_tk, j+1, &dest_di);
+							if (!samp) goto err_exit;
+							e = gf_isom_remove_sample(dest, dst_tk, j+1);
+							if (e) goto err_exit;
+							e = gf_isom_add_sample(dest, dst_tk, new_di, samp);
+							if (e) goto err_exit;
+						}
+						gf_isom_set_cts_packing(dest, dst_tk, GF_FALSE);
+					}
+				}
 				/*merge AVC config if possible*/
-				if ((stype == GF_ISOM_SUBTYPE_AVC_H264)
+				else if ((stype == GF_ISOM_SUBTYPE_AVC_H264)
 				        || (stype == GF_ISOM_SUBTYPE_AVC2_H264)
 				        || (stype == GF_ISOM_SUBTYPE_AVC3_H264)
 				        || (stype == GF_ISOM_SUBTYPE_AVC4_H264) ) {

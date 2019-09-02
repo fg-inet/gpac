@@ -3485,6 +3485,22 @@ GF_Err gf_isom_remove_sample_description(GF_ISOFile *movie, u32 trackNumber, u32
 	return GF_OK;
 }
 
+/*swap given stream descriptions*/
+GF_EXPORT
+GF_Err gf_isom_swap_sample_descriptions(GF_ISOFile *movie, u32 trackNumber, u32 streamDescIndex1, u32 streamDescIndex2)
+{
+	GF_TrackBox *trak;
+	GF_Err e;
+	
+	e = CanAccessMovie(movie, GF_ISOM_OPEN_WRITE);
+	if (e) return e;
+	trak = gf_isom_get_track_from_file(movie, trackNumber);
+	if (!trak || !trak->Media || !streamDescIndex1 || !streamDescIndex2) return GF_BAD_PARAM;
+
+	if (streamDescIndex1 == streamDescIndex2) return GF_OK;
+	return gf_list_swap_items(trak->Media->information->sampleTable->SampleDescription->other_boxes, streamDescIndex1-1, streamDescIndex2-1);
+}
+
 //sets a track reference
 GF_EXPORT
 GF_Err gf_isom_set_track_reference(GF_ISOFile *the_file, u32 trackNumber, u32 referenceType, u32 ReferencedTrackID)

@@ -1392,6 +1392,9 @@ GF_Err gf_isom_set_media_language(GF_ISOFile *the_file, u32 trackNumber, char *c
 /*removes given stream description*/
 GF_Err gf_isom_remove_sample_description(GF_ISOFile *the_file, u32 trackNumber, u32 streamDescIndex);
 
+/*swaps given stream descriptions (no change to the sample associations)*/
+GF_Err gf_isom_swap_sample_descriptions(GF_ISOFile *movie, u32 trackNumber, u32 streamDescIndex1, u32 streamDescIndex2);
+
 /*sets the RVC config for the given track sample description*/
 GF_Err gf_isom_set_rvc_config(GF_ISOFile *movie, u32 track, u32 sampleDescriptionIndex, u16 rvc_predefined, char *mime, char *data, u32 size);
 

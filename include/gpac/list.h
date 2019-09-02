@@ -233,6 +233,15 @@ void* gf_list_pop_front(GF_List *ptr);
  *	\return the popped element
  */
 void* gf_list_pop_back(GF_List *ptr);
+	
+/*!
+ *	\brief Swaps 2 items in a list
+ *
+ *	\param ptr the list
+ *	\param pos1 position of one element to swap.
+ *	\param pos2 position of the other element.
+ */
+GF_Err gf_list_swap_items(GF_List *ptr, u32 pos1, u32 pos2);
 
 /*! @} */
 

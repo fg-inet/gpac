@@ -834,3 +834,32 @@ void* gf_list_pop_back(GF_List *ptr) {
 
 	return item;
 }
+
+GF_EXPORT
+GF_Err gf_list_swap_items(GF_List *ptr, u32 pos1, u32 pos2) {
+	void *tmp;
+	GF_Err e;
+	u32 count, first, last;
+	if (!ptr) return GF_BAD_PARAM;
+	count = gf_list_count(ptr);
+	if ((pos1 >= count) || (pos2 >= count)) return GF_BAD_PARAM;
+	if (pos1 == pos2) return GF_OK;
+	if (pos1 < pos2) {
+		first = pos1;
+		last = pos2;
+	} else {
+		first = pos2;
+		last = pos1;
+	}
+	tmp = gf_list_get(ptr, first);
+	e = gf_list_insert(ptr, tmp, last);
+	if (e) return e;
+	tmp = gf_list_get(ptr, last+1);
+	e = gf_list_rem(ptr, last+1);
+	if (e) return e;
+	e = gf_list_insert(ptr, tmp, first);
+	if (e) return e;
+	e = gf_list_rem(ptr, first+1);
+	if (e) return e;
+	return GF_OK;
+}
