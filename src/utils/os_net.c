@@ -114,7 +114,7 @@ static int wsa_init = 0;
 // new Muacc socket library in network.h declared
 #include <muacc/muacc.h>
 #include <muacc/muacc_client.h>
-#include <muacc/muacc_client_util.h>
+#include <muacc/client_util.h>
 #include <muacc/intents.h>
 //#include <libmuacc-client/intents.h>
 

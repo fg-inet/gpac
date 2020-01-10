@@ -46,7 +46,7 @@
 // new Muacc socket library in network.h declared
 #include <muacc/muacc.h>
 #include <muacc/muacc_client.h>
-#include <muacc/muacc_client_util.h>
+#include <muacc/client_util.h>
 #include <muacc/intents.h>
 
 #define INITIAL_PLAYOUT_DELAY_LOG_FILE "initial_playout.log"

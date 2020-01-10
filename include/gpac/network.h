@@ -36,9 +36,9 @@ extern "C" {
  */
 
 // new Muacc socket library
-#include <libmuacc-client/muacc.h>
-#include <libmuacc-client/muacc_client.h>
-#include <libmuacc-client/muacc_client_util.h>
+#include <muacc/muacc.h>
+#include <muacc/muacc_client.h>
+#include <muacc/client_util.h>
 //#include <libmuacc-client/intents.h>
 //typedef s32 SOCKET;
 
